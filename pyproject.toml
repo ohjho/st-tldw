@@ -1,0 +1,11 @@
+[project]
+name = "st-tldw"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "litellm>=1.81.10",
+    "streamlit>=1.54.0",
+    "youtube-transcript-api>=1.2.4",
+]
