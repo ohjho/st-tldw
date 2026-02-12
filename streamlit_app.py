@@ -1,9 +1,21 @@
 import streamlit as st
-import litellm, re, os
+import litellm, re, os, requests
+from dotenv import load_dotenv
 from datetime import datetime
 from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api.proxies import GenericProxyConfig
+
+if os.path.isfile("./secrets.env"):
+    load_dotenv("./secrets.env")
 
 ytt_api = YouTubeTranscriptApi()
+# ytt_api = YouTubeTranscriptApi(
+#     proxy_config=GenericProxyConfig(
+#         http_url="http://pbstxhgh:u02335xao970@31.59.20.176:6754",
+#         # https_url="https://user:pass@my-custom-proxy.org:port",
+#     )
+# )
+SERPAPI_KEY = os.getenv("SERPAPI_KEY", None)
 
 
 def extract_video_id(url: str) -> str:
@@ -46,9 +58,52 @@ def get_youtube_transcript(video_id: str) -> dict:
         }
 
 
+@st.cache_data(ttl="1d")
+def get_youtube_transcript_serpapi(
+    video_id: str,
+    serpapi_key: str = "f35d07cb7f7acef82e488c5f65ed96e9200fd3a7888ae71f9c099679b768f105",
+) -> dict:
+    """Fetch transcript from YouTube video using SerpApi."""
+    try:
+        url = "https://serpapi.com/search"
+        params = {
+            "engine": "youtube_video_transcript",
+            "v": video_id,
+            "api_key": serpapi_key,
+        }
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        data = response.json()
+
+        if "transcript" in data:
+            transcript_text = " ".join([item["snippet"] for item in data["transcript"]])
+            return {
+                "success": True,
+                "transcript": transcript_text,
+                "raw_transcript": data["transcript"],
+                "error": None,
+            }
+        else:
+            return {
+                "success": False,
+                "transcript": None,
+                "raw_transcript": None,
+                "error": data.get("error", "Transcript not found"),
+            }
+    except Exception as e:
+        return {
+            "success": False,
+            "transcript": None,
+            "raw_transcript": None,
+            "error": str(e),
+        }
+
+
 def youtube_transcript(model: str, temperature: float, max_tokens: int, api_key: str):
     """Extract and display YouTube transcript with optional AI summarization."""
     st.header("📺 YouTube Transcript Extractor")
+
+    assert SERPAPI_KEY, f"SERPAPI_KEY not found in ENV"
 
     # Initialize session state for youtube
     if "youtube_url" not in st.session_state:
@@ -80,7 +135,8 @@ def youtube_transcript(model: str, temperature: float, max_tokens: int, api_key:
                 )
             else:
                 st.session_state.youtube_video_id = video_id
-                result = get_youtube_transcript(video_id)
+                # result = get_youtube_transcript(video_id)
+                result = get_youtube_transcript_serpapi(video_id)
 
                 if result["success"]:
                     st.session_state.youtube_transcript = result["transcript"]
