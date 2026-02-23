@@ -284,18 +284,18 @@ def youtube_transcript(model: str, temperature: float, max_tokens: int, api_key:
         # Analysis prompts
         if analysis_type == "Summarize":
             system_prompt = "You are a helpful assistant. Summarize the following YouTube transcript concisely, highlighting the main points and key takeaways."
-            user_prompt = f"Please summarize this transcript:\n\n{st.session_state.youtube_transcript[:3000]}"
+            user_prompt = f"Please summarize this transcript:\n\n{st.session_state.youtube_transcript}"
         elif analysis_type == "Ask Questions":
             user_input = st.text_input("Ask a question about the transcript content:")
             if user_input:
                 system_prompt = "You are a helpful assistant. Answer questions about the provided YouTube transcript accurately and thoroughly."
-                user_prompt = f"Transcript:\n{st.session_state.youtube_transcript[:3000]}\n\nQuestion: {user_input}"
+                user_prompt = f"Transcript:\n{st.session_state.youtube_transcript}\n\nQuestion: {user_input}"
             else:
                 st.info("Enter a question to analyze the transcript.")
                 return
         else:  # Extract Key Points
             system_prompt = "You are a helpful assistant. Extract and list the key points from the following YouTube transcript."
-            user_prompt = f"Extract key points from this transcript:\n\n{st.session_state.youtube_transcript[:3000]}"
+            user_prompt = f"Extract key points from this transcript:\n\n{st.session_state.youtube_transcript}"
 
         # Analyze button
         if not api_key:
@@ -322,9 +322,11 @@ def youtube_transcript(model: str, temperature: float, max_tokens: int, api_key:
 
                     # Display streamed response
                     st.subheader("Analysis Result")
-                    # response_content = st.write_stream(stream)
                     st.caption(f"response from {stream['model']}")
                     st.write(stream["choices"][0]["message"]["content"])
+
+                    # for unsupported stream, we need to write a wrapper: https://docs.streamlit.io/develop/api-reference/write-magic/st.write_stream
+                    # response_content = st.write_stream(stream)
 
                 except Exception as e:
                     st.error(f"Error during analysis: {str(e)}")
