@@ -1,9 +1,10 @@
 import streamlit as st
 import litellm, re, os, requests
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime, timedelta
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api.proxies import GenericProxyConfig
+from typing import List, Dict, Optional
 
 if os.path.isfile("./secrets.env"):
     load_dotenv("./secrets.env")
@@ -99,6 +100,48 @@ def get_youtube_transcript_serpapi(
         }
 
 
+def ms_to_srt_timestamp(ms: int) -> str:
+    """Convert milliseconds to SRT timestamp format: HH:MM:SS,mmm"""
+    # Handle non-int inputs gracefully
+    try:
+        ms_int = int(ms)
+    except Exception:
+        ms_int = 0
+    hours, remainder = divmod(ms_int, 3600 * 1000)
+    minutes, remainder = divmod(remainder, 60 * 1000)
+    seconds, milliseconds = divmod(remainder, 1000)
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d},{milliseconds:03d}"
+
+
+def serp_transcript_to_srt(transcript: Optional[List[Dict]]) -> str:
+    """
+    Convert a SerpApi-style transcript (list of dicts with 'start_ms', 'end_ms', 'snippet')
+    into an SRT formatted string.
+    """
+    if not transcript or not isinstance(transcript, list):
+        return ""
+
+    srt_lines = []
+    idx = 1
+    for item in transcript:
+        # SerpAPI transcript entries commonly have 'start_ms', 'end_ms', and 'snippet'
+        start_ms = item.get("start_ms") or item.get("start") or 0
+        end_ms = item.get("end_ms") or item.get("end") or 0
+        text = item.get("snippet") or item.get("text") or item.get("transcript") or ""
+        # sanitize text: replace newlines with spaces (SRT supports newlines but many entries are short)
+        text = text.replace("\n", " ").strip()
+        # if start and end are 0 or missing, skip empty entries
+        if not text:
+            continue
+        start_ts = ms_to_srt_timestamp(start_ms)
+        end_ts = ms_to_srt_timestamp(end_ms)
+        srt_block = f"{idx}\n{start_ts} --> {end_ts}\n{text}\n"
+        srt_lines.append(srt_block)
+        idx += 1
+
+    return "\n".join(srt_lines)
+
+
 def youtube_transcript(model: str, temperature: float, max_tokens: int, api_key: str):
     """Extract and display YouTube transcript with optional AI summarization."""
     st.header("📺 YouTube Transcript Extractor")
@@ -106,12 +149,15 @@ def youtube_transcript(model: str, temperature: float, max_tokens: int, api_key:
     assert SERPAPI_KEY, f"SERPAPI_KEY not found in ENV"
 
     # Initialize session state for youtube
-    if "youtube_url" not in st.session_state:
-        st.session_state.youtube_url = ""
-    if "youtube_video_id" not in st.session_state:
-        st.session_state.youtube_video_id = ""
-    if "youtube_transcript" not in st.session_state:
-        st.session_state.youtube_transcript = ""
+    stored_values = [
+        "youtube_url",
+        "youtube_video_id",
+        "youtube_transcript",
+        "serp_transcript",
+    ]
+    for v in stored_values:
+        if v not in st.session_state:
+            st.session_state[v] = ""
 
     # URL input
     col1, col2 = st.columns([0.85, 0.15])
@@ -140,6 +186,7 @@ def youtube_transcript(model: str, temperature: float, max_tokens: int, api_key:
 
                 if result["success"]:
                     st.session_state.youtube_transcript = result["transcript"]
+                    st.session_state.serp_transcript = result["raw_transcript"]
                     st.success("✅ Transcript extracted successfully!")
                 else:
                     st.error(f"❌ Failed to fetch transcript: {result['error']}")
@@ -160,13 +207,59 @@ def youtube_transcript(model: str, temperature: float, max_tokens: int, api_key:
 
         col1, col2 = st.columns([0.7, 0.3])
         with col1:
-            st.text_area(
+            tab_text, tab_json, tab_srt = st.tabs(
+                [
+                    ":material/article:",
+                    ":material/data_object:",
+                    ":material/closed_caption:",
+                ]
+            )
+            tab_text.text_area(
                 "Full Transcript",
                 value=st.session_state.youtube_transcript,
                 height=300,
                 disabled=True,
                 label_visibility="collapsed",
             )
+
+            # Show JSON/raw transcript returned by SerpApi
+            tab_json.write(st.session_state.serp_transcript)
+
+            # Convert to SRT string and provide download button in the SRT tab
+            serp = st.session_state.serp_transcript
+            srt_string = ""
+            if serp:
+                try:
+                    srt_string = serp_transcript_to_srt(serp)
+                except Exception as e:
+                    srt_string = ""
+                    tab_srt.error(f"Failed to convert transcript to SRT: {e}")
+
+            if srt_string:
+                # Display SRT in a disabled text area for preview
+                tab_srt.text_area(
+                    "SRT Preview",
+                    value=srt_string,
+                    height=300,
+                    disabled=True,
+                    label_visibility="collapsed",
+                )
+                # Provide download button
+                file_name = (
+                    f"{st.session_state.youtube_video_id}.srt"
+                    if st.session_state.youtube_video_id
+                    else "transcript.srt"
+                )
+                # st.download_button can accept string content directly
+                tab_srt.download_button(
+                    label="⬇️ Download .srt",
+                    data=srt_string,
+                    file_name=file_name,
+                    mime="text/srt",
+                )
+            else:
+                tab_srt.info("No timed transcript available to convert to SRT.")
+
         with col2:
             st.metric(
                 "Transcript Length",
