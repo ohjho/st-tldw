@@ -23,6 +23,22 @@ ytt_api = YouTubeTranscriptApi()
 #     )
 # )
 SERPAPI_KEY = os.getenv("SERPAPI_KEY", None)
+DEFAULT_API_KEY = os.environ.get("OPENROUTER_API_KEY", None)
+
+
+@st.cache_data(ttl=300)
+def get_serpapi_searches_left(api_key: str) -> Optional[int]:
+    """Fetch total searches left from SerpAPI account endpoint."""
+    try:
+        resp = requests.get(
+            "https://serpapi.com/account.json",
+            params={"api_key": api_key},
+            timeout=10,
+        )
+        resp.raise_for_status()
+        return resp.json().get("total_searches_left")
+    except Exception:
+        return None
 
 
 def extract_video_id(url: str) -> str:
@@ -194,7 +210,9 @@ def youtube_transcript(model: str, temperature: float, max_tokens: int, api_key:
                     st.session_state.serp_transcript = result["raw_transcript"]
                     st.success("✅ Transcript extracted successfully!")
                 else:
-                    st.error(f"❌ Failed to fetch transcript: {result['error']}")
+                    st.error(
+                        f"❌ Failed to fetch transcript for video id `{video_id}`: {result['error']}"
+                    )
 
     # Display transcript if available
     if st.session_state.youtube_transcript:
@@ -486,6 +504,8 @@ def main():
     st.title("🎬 ST-TLDW: Streamlit YouTube Transcript & LLM Chat")
 
     # Initialize session state
+    if not DEFAULT_API_KEY:
+        st.error(f"missing `DEFAULT_API_KEY` in secrets. Please set it.")
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
@@ -508,12 +528,12 @@ def main():
         )
 
         # API Key input
-        api_key = st.text_input(
+        custom_api_key = st.text_input(
             "API Key",
             type="password",
-            help="Enter your API key for the selected model provider",
-            value=os.environ.get("OPENROUTER_API_KEY", ""),
+            help="Enter your own API key for the selected model provider",
         )
+        api_key = custom_api_key if custom_api_key else DEFAULT_API_KEY
 
         if api_key:
             if "gpt" in model:
@@ -539,7 +559,17 @@ def main():
             step=100,
         )
 
-    # TODO: in the sidebar please add a widget to display the number of free API calls I have left from serp
+        st.divider()
+        if st.button("🗑️ Clear Session", use_container_width=True):
+            st.session_state.clear()
+            st.rerun()
+
+        if SERPAPI_KEY:
+            searches_left = get_serpapi_searches_left(SERPAPI_KEY)
+            if searches_left is not None:
+                st.metric("SerpAPI Searches Left", searches_left)
+            else:
+                st.warning("Could not fetch SerpAPI account info")
 
     # Navigation tabs
     tab1, tab2 = st.tabs(["📺 YouTube Transcript", "💬 Chat"])
