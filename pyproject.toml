@@ -8,4 +8,10 @@ dependencies = [
     "litellm>=1.81.10",
     "streamlit>=1.54.0",
     "youtube-transcript-api>=1.2.4",
+    "langchain>=0.3",
+    "langchain-community>=0.3",
+    "rank-bm25>=0.2",
+    "faiss-cpu>=1.9",
+    "sentence-transformers>=3.0",
+    "langchain-huggingface>=0.1",
 ]
