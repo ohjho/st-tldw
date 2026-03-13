@@ -44,6 +44,7 @@ def chat_with_rag(
     temperature: float,
     max_tokens: int,
     api_key: str,
+    default_method: str = None,
 ):
     """RAG chat interface over an SRT transcript string."""
     st.header("💬 Chat with Transcript")
@@ -67,9 +68,12 @@ def chat_with_rag(
             st.session_state[key] = default
 
     # Retrieval method selector
+    method_options = ["BM25 (Keyword)", "Semantic (BGE)"]
+    default_index = 1 if default_method and default_method.lower() == "semantic" else 0
     retrieval_method = st.radio(
         "Retrieval method",
-        options=["BM25 (Keyword)", "Semantic (BGE)"],
+        options=method_options,
+        index=default_index,
         horizontal=True,
         help="BM25: fast keyword matching, no model download. Semantic: neural embeddings (~130MB first-run download), understands synonyms.",
     )

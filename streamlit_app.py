@@ -208,6 +208,7 @@ def youtube_transcript(model: str, temperature: float, max_tokens: int, api_key:
                 if result["success"]:
                     st.session_state.youtube_transcript = result["transcript"]
                     st.session_state.serp_transcript = result["raw_transcript"]
+                    st.query_params["v"] = video_id
                     st.success("✅ Transcript extracted successfully!")
                 else:
                     st.error(
@@ -290,8 +291,15 @@ def youtube_transcript(model: str, temperature: float, max_tokens: int, api_key:
             )
             st.metric("Word Count", len(st.session_state.youtube_transcript.split()))
 
-        # Copy to clipboard
-        st.button("📋 Copy Transcript", key="copy_transcript")
+        # Copy to clipboard and share link
+        col_copy, col_share = st.columns(2)
+        with col_copy:
+            st.button("📋 Copy Transcript", key="copy_transcript")
+        with col_share:
+            if st.session_state.youtube_video_id:
+                base_url = os.getenv("APP_BASE_URL", "http://localhost:8501")
+                share_url = f"{base_url}/?v={st.session_state.youtube_video_id}"
+                st.code(share_url, language=None)
 
         st.divider()
 
@@ -503,6 +511,11 @@ def main():
 
     st.title("🎬 ST-TLDW: Streamlit YouTube Transcript & LLM Chat")
 
+    # Read URL query params for session sharing
+    qp = st.query_params
+    url_video_id = qp.get("v", None)
+    url_method = qp.get("method", None)
+
     # Initialize session state
     if not DEFAULT_API_KEY:
         st.error(f"missing `DEFAULT_API_KEY` in secrets. Please set it.")
@@ -511,6 +524,18 @@ def main():
 
     if "api_key_set" not in st.session_state:
         st.session_state.api_key_set = False
+
+    # Auto-load transcript from URL param ?v=VIDEO_ID
+    if url_video_id and SERPAPI_KEY:
+        if st.session_state.get("youtube_video_id") != url_video_id:
+            result = get_youtube_transcript_serpapi(url_video_id, serpapi_key=SERPAPI_KEY)
+            if result["success"]:
+                st.session_state.youtube_video_id = url_video_id
+                st.session_state.youtube_transcript = result["transcript"]
+                st.session_state.serp_transcript = result["raw_transcript"]
+                st.session_state.youtube_url = f"https://www.youtube.com/watch?v={url_video_id}"
+            else:
+                st.warning(f"Could not load transcript for video `{url_video_id}`: {result['error']}")
 
     # Sidebar for analysis configuration
     with st.sidebar:
@@ -562,6 +587,7 @@ def main():
         st.divider()
         if st.button("🗑️ Clear Session", use_container_width=True):
             st.session_state.clear()
+            st.query_params.clear()
             st.rerun()
 
         if SERPAPI_KEY:
@@ -589,6 +615,7 @@ def main():
             temperature=temperature,
             max_tokens=max_tokens,
             api_key=api_key,
+            default_method=url_method,
         )
 
 
