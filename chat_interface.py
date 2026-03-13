@@ -1,11 +1,11 @@
 import streamlit as st
-from langchain_core.documents import Document
-from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.chat_models import ChatLiteLLM
 from langchain_community.retrievers import BM25Retriever
 from langchain_community.vectorstores import FAISS
+from langchain_core.documents import Document
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 
 def _split_srt(srt_string: str) -> list[Document]:
@@ -50,7 +50,9 @@ def chat_with_rag(
     st.header("💬 Chat with Transcript")
 
     if not srt_string:
-        st.info("Fetch a transcript in the YouTube tab first, then come here to chat about it.")
+        st.info(
+            "Fetch a transcript in the YouTube tab first, then come here to chat about it."
+        )
         return
 
     if not api_key:
@@ -130,7 +132,9 @@ def chat_with_rag(
             f"Context:\n{context}"
         )
         messages = [SystemMessage(content=system_content)]
-        for msg in st.session_state.rag_messages[:-1]:  # exclude current user msg (added separately)
+        for msg in st.session_state.rag_messages[
+            :-1
+        ]:  # exclude current user msg (added separately)
             if msg["role"] == "user":
                 messages.append(HumanMessage(content=msg["content"]))
             else:
@@ -148,8 +152,9 @@ def chat_with_rag(
 
         with st.chat_message("assistant"):
             try:
-                stream = llm.stream(messages)
-                response_content = st.write_stream(_stream_text(stream))
+                with st.spinner("thinking..."):
+                    stream = llm.stream(messages)
+                    response_content = st.write_stream(_stream_text(stream))
             except Exception as e:
                 st.error(f"Error: {e}")
                 st.session_state.rag_messages.pop()
