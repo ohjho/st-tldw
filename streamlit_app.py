@@ -363,144 +363,6 @@ def youtube_transcript(model: str, temperature: float, max_tokens: int, api_key:
                     st.error(f"Error during analysis: {str(e)}")
 
 
-def chat_interface():
-    """Main chat interface with litellm."""
-    st.header("💬 Chat Interface")
-
-    # Sidebar configuration
-    with st.sidebar:
-        st.title("⚙️ Chat Configuration")
-
-        # Model selection
-        model = st.selectbox(
-            "Select Model",
-            options=[
-                "gpt-4",
-                "gpt-4-turbo-preview",
-                "gpt-3.5-turbo",
-                "claude-3-opus-20240229",
-                "claude-3-sonnet-20240229",
-                "claude-3-haiku-20240307",
-                "mistral/mistral-7b-instruct",
-                "ollama/neural-chat",
-            ],
-            help="Select an LLM model to use for chat",
-            key="chat_model",
-        )
-
-        # API Key input
-        api_key = st.text_input(
-            "API Key",
-            type="password",
-            help="Enter your API key for the selected model provider",
-            key="chat_api_key",
-        )
-
-        if api_key:
-            st.session_state.api_key_set = True
-            # Set the API key for litellm
-            if "gpt" in model:
-                litellm.api_key = api_key
-            elif "claude" in model:
-                litellm.api_key = api_key
-
-        # Temperature slider
-        temperature = st.slider(
-            "Temperature",
-            min_value=0.0,
-            max_value=2.0,
-            value=0.7,
-            step=0.1,
-            help="Higher values make output more random, lower values more focused",
-            key="chat_temperature",
-        )
-
-        # Max tokens slider
-        max_tokens = st.slider(
-            "Max Tokens",
-            min_value=100,
-            max_value=4096,
-            value=2048,
-            step=100,
-            help="Maximum length of the response",
-            key="chat_max_tokens",
-        )
-
-        # System prompt
-        system_prompt = st.text_area(
-            "System Prompt",
-            value="You are a helpful AI assistant.",
-            height=100,
-            help="Define the behavior and personality of the assistant",
-            key="chat_system_prompt",
-        )
-
-        # Clear chat button
-        if st.button("🗑️ Clear Chat History", use_container_width=True):
-            st.session_state.messages = []
-            st.rerun()
-
-        # Display statistics
-        st.divider()
-        col1, col2 = st.columns(2)
-        with col1:
-            st.metric("Messages", len(st.session_state.messages))
-        with col2:
-            st.metric("Model", model.split("/")[-1][:15])
-
-    # Display chat messages from history on app rerun
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
-
-    # Accept user input
-    if prompt := st.chat_input("What is up?"):
-        if not st.session_state.api_key_set:
-            st.error("Please enter an API key in the sidebar")
-        else:
-            # Add user message to chat history
-            st.session_state.messages.append({"role": "user", "content": prompt})
-
-            # Display user message in chat message container
-            with st.chat_message("user"):
-                st.markdown(prompt)
-
-            # Display assistant response in chat message container
-            with st.chat_message("assistant"):
-                # Prepare messages for API call
-                api_messages = [
-                    {"role": "system", "content": system_prompt},
-                    *[
-                        {"role": m["role"], "content": m["content"]}
-                        for m in st.session_state.messages
-                    ],
-                ]
-
-                try:
-                    # Call litellm with streaming
-                    stream = litellm.completion(
-                        model=model,
-                        messages=api_messages,
-                        temperature=temperature,
-                        max_tokens=max_tokens,
-                        stream=True,
-                    )
-
-                    # Use st.write_stream to display the streamed response
-                    response_content = st.write_stream(stream)
-
-                except Exception as e:
-                    st.error(f"Error: {str(e)}")
-                    # Remove the user message if there was an error
-                    st.session_state.messages.pop()
-                    st.stop()
-
-            # Add assistant response to chat history
-            st.session_state.messages.append(
-                {"role": "assistant", "content": response_content}
-            )
-
-
 def main():
     """Main application."""
     st.set_page_config(
@@ -528,14 +390,20 @@ def main():
     # Auto-load transcript from URL param ?v=VIDEO_ID
     if url_video_id and SERPAPI_KEY:
         if st.session_state.get("youtube_video_id") != url_video_id:
-            result = get_youtube_transcript_serpapi(url_video_id, serpapi_key=SERPAPI_KEY)
+            result = get_youtube_transcript_serpapi(
+                url_video_id, serpapi_key=SERPAPI_KEY
+            )
             if result["success"]:
                 st.session_state.youtube_video_id = url_video_id
                 st.session_state.youtube_transcript = result["transcript"]
                 st.session_state.serp_transcript = result["raw_transcript"]
-                st.session_state.youtube_url = f"https://www.youtube.com/watch?v={url_video_id}"
+                st.session_state.youtube_url = (
+                    f"https://www.youtube.com/watch?v={url_video_id}"
+                )
             else:
-                st.warning(f"Could not load transcript for video `{url_video_id}`: {result['error']}")
+                st.warning(
+                    f"Could not load transcript for video `{url_video_id}`: {result['error']}"
+                )
 
     # Sidebar for analysis configuration
     with st.sidebar:
