@@ -8,7 +8,7 @@ from chat_interface import chat_with_rag
 from utils import (
     extract_video_id,
     get_serpapi_searches_left,
-    get_video_metadata_oembed,
+    get_video_metadata_youtube_api,
     get_youtube_transcript_serpapi,
     serp_transcript_to_srt,
 )
@@ -19,6 +19,7 @@ if os.path.isfile("./secrets.env"):
 SERPAPI_KEY = os.getenv("SERPAPI_KEY", None)
 DEFAULT_OR_API_KEY = os.environ.get("OPENROUTER_API_KEY", None)
 DEFAULT_OLLAMA_API_KEY = os.environ.get("OLLAMA_API_KEY", None)
+YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY", None)
 
 
 def youtube_transcript(
@@ -75,8 +76,8 @@ def youtube_transcript(
                 if result["success"]:
                     st.session_state.youtube_transcript = result["transcript"]
                     st.session_state.serp_transcript = result["raw_transcript"]
-                    st.session_state.video_metadata = get_video_metadata_oembed(
-                        video_id
+                    st.session_state.video_metadata = get_video_metadata_youtube_api(
+                        video_id, YOUTUBE_API_KEY
                     )
                     st.query_params["v"] = video_id
                     st.success("✅ Transcript extracted successfully!")
@@ -269,8 +270,8 @@ def main():
                 st.session_state.youtube_video_id = url_video_id
                 st.session_state.youtube_transcript = result["transcript"]
                 st.session_state.serp_transcript = result["raw_transcript"]
-                st.session_state.video_metadata = get_video_metadata_oembed(
-                    url_video_id
+                st.session_state.video_metadata = get_video_metadata_youtube_api(
+                    url_video_id, YOUTUBE_API_KEY
                 )
                 st.session_state.youtube_url = (
                     f"https://www.youtube.com/watch?v={url_video_id}"
