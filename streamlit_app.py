@@ -17,7 +17,8 @@ if os.path.isfile("./secrets.env"):
     load_dotenv("./secrets.env")
 
 SERPAPI_KEY = os.getenv("SERPAPI_KEY", None)
-DEFAULT_API_KEY = os.environ.get("OPENROUTER_API_KEY", None)
+DEFAULT_OR_API_KEY = os.environ.get("OPENROUTER_API_KEY", None)
+DEFAULT_OLLAMA_API_KEY = os.environ.get("OLLAMA_API_KEY", None)
 
 
 def youtube_transcript(
@@ -250,8 +251,8 @@ def main():
     url_method = qp.get("method", None)
 
     # Initialize session state
-    if not DEFAULT_API_KEY:
-        st.error(f"missing `DEFAULT_API_KEY` in secrets. Please set it.")
+    if not DEFAULT_OLLAMA_API_KEY:
+        st.error(f"missing `DEFAULT_OLLAMA_API_KEY` in secrets. Please set it.")
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
@@ -286,7 +287,7 @@ def main():
         # Provider selection
         provider = st.radio(
             "Provider",
-            options=["OpenRouter", "Ollama Cloud"],
+            options=["Ollama Cloud", "OpenRouter"],
             horizontal=True,
         )
 
@@ -322,7 +323,7 @@ def main():
             type="password",
             help="Enter your own API key for the selected model provider",
         )
-        api_key = custom_api_key if custom_api_key else DEFAULT_API_KEY
+        api_key = custom_api_key if custom_api_key else DEFAULT_OLLAMA_API_KEY
 
         # Temperature slider
         temperature = st.slider(
