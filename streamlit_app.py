@@ -1,212 +1,23 @@
 import os
-import re
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional
 
 import litellm
-import requests
 import streamlit as st
 from dotenv import load_dotenv
-from youtube_transcript_api import YouTubeTranscriptApi
-from youtube_transcript_api.proxies import GenericProxyConfig
 
 from chat_interface import chat_with_rag
+from utils import (
+    extract_video_id,
+    get_serpapi_searches_left,
+    get_video_metadata_oembed,
+    get_youtube_transcript_serpapi,
+    serp_transcript_to_srt,
+)
 
 if os.path.isfile("./secrets.env"):
     load_dotenv("./secrets.env")
 
-ytt_api = YouTubeTranscriptApi()
-# ytt_api = YouTubeTranscriptApi(
-#     proxy_config=GenericProxyConfig(
-#         http_url="http://pbstxhgh:u02335xao970@31.59.20.176:6754",
-#         # https_url="https://user:pass@my-custom-proxy.org:port",
-#     )
-# )
 SERPAPI_KEY = os.getenv("SERPAPI_KEY", None)
 DEFAULT_API_KEY = os.environ.get("OPENROUTER_API_KEY", None)
-
-
-@st.cache_data(ttl=300)
-def get_serpapi_searches_left(api_key: str) -> Optional[int]:
-    """Fetch total searches left from SerpAPI account endpoint."""
-    try:
-        resp = requests.get(
-            "https://serpapi.com/account.json",
-            params={"api_key": api_key},
-            timeout=10,
-        )
-        resp.raise_for_status()
-        return resp.json().get("total_searches_left")
-    except Exception:
-        return None
-
-
-def extract_video_id(url: str) -> str:
-    """Extract video ID from various YouTube URL formats."""
-    # Handle different YouTube URL formats
-    patterns = [
-        r"(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)",
-        r"youtube\.com\/watch\?.*v=([^&\n?#]+)",
-    ]
-
-    for pattern in patterns:
-        match = re.search(pattern, url)
-        if match:
-            return match.group(1)
-
-    # If no pattern matches, assume the input is already a video ID
-    if len(url) == 11 and re.match(r"^[a-zA-Z0-9_-]+$", url):
-        return url
-
-    return None
-
-
-def get_youtube_transcript(video_id: str) -> dict:
-    """Fetch transcript from YouTube video."""
-    try:
-        transcript_list = ytt_api.fetch(video_id)
-        transcript_text = " ".join([item.text for item in transcript_list])
-        return {
-            "success": True,
-            "transcript": transcript_text,
-            "raw_transcript": transcript_list,
-            "error": None,
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "transcript": None,
-            "raw_transcript": None,
-            "error": str(e),
-        }
-
-
-@st.cache_data(ttl="1d")
-def get_youtube_transcript_serpapi(video_id: str, serpapi_key: str) -> dict:
-    """Fetch transcript from YouTube video using SerpApi."""
-    try:
-        url = "https://serpapi.com/search"
-        params = {
-            "engine": "youtube_video_transcript",
-            "v": video_id,
-            "api_key": serpapi_key,
-        }
-        response = requests.get(url, params=params)
-        response.raise_for_status()
-        data = response.json()
-
-        if "transcript" in data:
-            transcript_text = " ".join([item["snippet"] for item in data["transcript"]])
-            return {
-                "success": True,
-                "transcript": transcript_text,
-                "raw_transcript": data["transcript"],
-                "error": None,
-            }
-        else:
-            return {
-                "success": False,
-                "transcript": None,
-                "raw_transcript": None,
-                "error": data.get("error", "Transcript not found"),
-            }
-    except Exception as e:
-        return {
-            "success": False,
-            "transcript": None,
-            "raw_transcript": None,
-            "error": str(e),
-        }
-
-
-@st.cache_data(ttl="1d")
-def get_video_metadata_oembed(video_id: str) -> dict:
-    """Fetch video metadata from the YouTube oEmbed endpoint.
-
-    Uses the free, unauthenticated YouTube oEmbed API to retrieve basic
-    metadata such as title, author name, author URL, and thumbnail URL.
-
-    Args:
-        video_id: YouTube video ID (e.g. ``"dQw4w9WgXcQ"``).
-
-    Returns:
-        A dict with keys ``success``, ``title``, ``author_name``,
-        ``author_url``, ``thumbnail_url``, and ``error``.
-
-    Examples:
-        >>> result = get_video_metadata_oembed.__wrapped__("dQw4w9WgXcQ")
-        >>> result["success"]
-        True
-        >>> result["title"] != ""
-        True
-    """
-    url = (
-        f"https://www.youtube.com/oembed"
-        f"?url=https://www.youtube.com/watch?v={video_id}&format=json"
-    )
-    try:
-        resp = requests.get(url, timeout=10)
-        resp.raise_for_status()
-        data = resp.json()
-        return {
-            "success": True,
-            "title": data.get("title", ""),
-            "author_name": data.get("author_name", ""),
-            "author_url": data.get("author_url", ""),
-            "thumbnail_url": data.get("thumbnail_url", ""),
-            "error": None,
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "title": "",
-            "author_name": "",
-            "author_url": "",
-            "thumbnail_url": "",
-            "error": str(e),
-        }
-
-
-def ms_to_srt_timestamp(ms: int) -> str:
-    """Convert milliseconds to SRT timestamp format: HH:MM:SS,mmm"""
-    # Handle non-int inputs gracefully
-    try:
-        ms_int = int(ms)
-    except Exception:
-        ms_int = 0
-    hours, remainder = divmod(ms_int, 3600 * 1000)
-    minutes, remainder = divmod(remainder, 60 * 1000)
-    seconds, milliseconds = divmod(remainder, 1000)
-    return f"{hours:02d}:{minutes:02d}:{seconds:02d},{milliseconds:03d}"
-
-
-def serp_transcript_to_srt(transcript: Optional[List[Dict]]) -> str:
-    """
-    Convert a SerpApi-style transcript (list of dicts with 'start_ms', 'end_ms', 'snippet')
-    into an SRT formatted string.
-    """
-    if not transcript or not isinstance(transcript, list):
-        return ""
-
-    srt_lines = []
-    idx = 1
-    for item in transcript:
-        # SerpAPI transcript entries commonly have 'start_ms', 'end_ms', and 'snippet'
-        start_ms = item.get("start_ms") or item.get("start") or 0
-        end_ms = item.get("end_ms") or item.get("end") or 0
-        text = item.get("snippet") or item.get("text") or item.get("transcript") or ""
-        # sanitize text: replace newlines with spaces (SRT supports newlines but many entries are short)
-        text = text.replace("\n", " ").strip()
-        # if start and end are 0 or missing, skip empty entries
-        if not text:
-            continue
-        start_ts = ms_to_srt_timestamp(start_ms)
-        end_ts = ms_to_srt_timestamp(end_ms)
-        srt_block = f"{idx}\n{start_ts} --> {end_ts}\n{text}\n"
-        srt_lines.append(srt_block)
-        idx += 1
-
-    return "\n".join(srt_lines)
 
 
 def youtube_transcript(model: str, temperature: float, max_tokens: int, api_key: str):

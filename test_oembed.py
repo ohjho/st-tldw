@@ -2,7 +2,7 @@
 
 import pytest
 
-from streamlit_app import get_video_metadata_oembed
+from utils import get_video_metadata_oembed
 
 
 # Access the unwrapped function to bypass Streamlit caching in tests.
@@ -30,9 +30,9 @@ class TestGetVideoMetadataOembed:
         assert result["title"] == ""
 
     def test_doctest(self):
-        """Run the doctest embedded in the function docstring."""
+        """Run the doctests embedded in the utils module."""
         import doctest
-        import streamlit_app
+        import utils
 
-        results = doctest.testmod(streamlit_app, verbose=False)
+        results = doctest.testmod(utils, verbose=False)
         assert results.failed == 0

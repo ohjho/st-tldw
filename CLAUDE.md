@@ -22,12 +22,15 @@ uv sync
 
 - **`main()`** - Entry point. Sets up page config, sidebar controls (model, API key, temperature, max tokens), and two tabs: YouTube Transcript and Chat.
 - **`youtube_transcript()`** - Core feature. Fetches transcripts via `get_youtube_transcript_serpapi()`, displays them in text/JSON/SRT tabs, and offers AI analysis (summarize, Q&A, key points) using litellm.
+
+### `utils.py` — Utility functions
+
+- **`extract_video_id()`** - Extract video ID from various YouTube URL formats (standard, short, embed, bare ID).
 - **`get_youtube_transcript_serpapi()`** - Cached (`@st.cache_data(ttl="1d")`) SerpAPI call to fetch YouTube transcripts. Primary transcript source.
 - **`get_youtube_transcript()`** - Alternative transcript fetcher using `youtube-transcript-api` directly (currently unused, kept as fallback).
-- **`serp_transcript_to_srt()`** / **`ms_to_srt_timestamp()`** - Convert SerpAPI transcript format to SRT subtitle format with download support.
 - **`get_video_metadata_oembed()`** - Cached (`@st.cache_data(ttl="1d")`) call to the free YouTube oEmbed endpoint. Returns video title, author name/URL, and thumbnail URL. No API key required.
 - **`get_serpapi_searches_left()`** - Cached (5min TTL) call to SerpAPI account endpoint; displays remaining searches in the sidebar.
-- **`chat_interface()`** - Legacy standalone chat UI (not wired up, superseded by RAG chat).
+- **`serp_transcript_to_srt()`** / **`ms_to_srt_timestamp()`** - Convert SerpAPI transcript format to SRT subtitle format with download support.
 
 ### `chat_interface.py` — RAG chat module
 
