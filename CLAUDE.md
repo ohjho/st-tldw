@@ -21,7 +21,9 @@ uv sync
 ### `streamlit_app.py` — Main app
 
 - **`main()`** - Entry point. Sets up page config, sidebar controls (model, API key, temperature, max tokens), and two tabs: YouTube Transcript and Chat.
-- **`youtube_transcript()`** - Core feature. Fetches transcripts via `get_youtube_transcript_serpapi()`, displays them in text/JSON/SRT tabs, and offers AI analysis (summarize, Q&A, key points) using litellm.
+- **`youtube_transcript()`** - Core feature. Fetches transcripts via `get_youtube_transcript_serpapi()`, displays them in text/JSON/SRT tabs, and delegates AI analysis to `analyze_transcript()`.
+- **`analyze_transcript()`** - Renders the AI analysis UI (Summarize / Extract Key Points). Reads SRT transcript and video metadata from session state, builds timestamp-aware prompts with video title and description, and calls the cached `_cached_analysis()` helper.
+- **`_cached_analysis()`** - `@st.cache_data`-decorated LLM call via litellm. Cache key is `(video_id, analysis_type, model, temperature, max_tokens)` to avoid hashing large transcript strings.
 
 ### `utils.py` — Utility functions
 
@@ -33,6 +35,7 @@ uv sync
 - **`get_serpapi_searches_left()`** - Cached (5min TTL) call to SerpAPI account endpoint; displays remaining searches in the sidebar.
 - **`serp_transcript_to_srt()`** / **`ms_to_srt_timestamp()`** - Convert SerpAPI transcript format to SRT subtitle format with download support.
 - **`copy_to_clipboard_button()`** - Render an HTML button via `st.html` that copies arbitrary text to the clipboard using `navigator.clipboard`.
+- **`srt_timestamp_to_seconds()`** - Convert SRT timestamp (`HH:MM:SS,mmm`) to whole seconds for YouTube `&t=` URL parameters.
 
 ### `chat_interface.py` — RAG chat module
 

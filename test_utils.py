@@ -2,7 +2,7 @@
 
 import pytest
 
-from utils import extract_video_id, ms_to_srt_timestamp, serp_transcript_to_srt
+from utils import extract_video_id, ms_to_srt_timestamp, serp_transcript_to_srt, srt_timestamp_to_seconds
 
 
 class TestExtractVideoId:
@@ -53,6 +53,36 @@ class TestMsToSrtTimestamp:
     def test_float_input(self):
         """Float input is truncated to int."""
         assert ms_to_srt_timestamp(1500.7) == "00:00:01,500"
+
+
+class TestSrtTimestampToSeconds:
+    """Tests for srt_timestamp_to_seconds()."""
+
+    def test_zero(self):
+        assert srt_timestamp_to_seconds("00:00:00,000") == 0
+
+    def test_simple_seconds(self):
+        assert srt_timestamp_to_seconds("00:00:05,000") == 5
+
+    def test_minutes_and_seconds(self):
+        assert srt_timestamp_to_seconds("00:01:30,500") == 90
+
+    def test_full_format(self):
+        assert srt_timestamp_to_seconds("01:01:01,001") == 3661
+
+    def test_milliseconds_truncated(self):
+        """Milliseconds are discarded, not rounded."""
+        assert srt_timestamp_to_seconds("00:00:01,999") == 1
+
+    def test_no_milliseconds(self):
+        """Timestamps without the comma+ms portion still parse."""
+        assert srt_timestamp_to_seconds("00:02:00") == 120
+
+    def test_invalid_input(self):
+        assert srt_timestamp_to_seconds("invalid") == 0
+
+    def test_empty_string(self):
+        assert srt_timestamp_to_seconds("") == 0
 
 
 class TestSerpTranscriptToSrt:

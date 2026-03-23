@@ -23,6 +23,151 @@ DEFAULT_OLLAMA_API_KEY = os.environ.get("OLLAMA_API_KEY", None)
 YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY", None)
 
 
+@st.cache_data(show_spinner=False)
+def _cached_analysis(
+    video_id: str,
+    analysis_type: str,
+    _system_prompt: str,
+    _user_prompt: str,
+    model: str,
+    temperature: float,
+    max_tokens: int,
+    api_key: str,
+    api_base: str = None,
+) -> dict:
+    """Run an LLM analysis call and cache the result.
+
+    The cache key is based on ``video_id``, ``analysis_type``, and model
+    parameters so re-running the same analysis is instant.  The full prompt
+    strings are prefixed with ``_`` so Streamlit excludes them from the
+    hash (they are derived deterministically from the other keys).
+
+    Args:
+        video_id: YouTube video ID (cache key).
+        analysis_type: ``"Summarize"`` or ``"Extract Key Points"`` (cache key).
+        _system_prompt: System prompt for the LLM (not hashed).
+        _user_prompt: User prompt for the LLM (not hashed).
+        model: LiteLLM model identifier.
+        temperature: Sampling temperature.
+        max_tokens: Max tokens for the response.
+        api_key: Provider API key.
+        api_base: Optional provider base URL.
+
+    Returns:
+        dict with ``model`` and ``content`` keys.
+    """
+    api_messages = [
+        {"role": "system", "content": _system_prompt},
+        {"role": "user", "content": _user_prompt},
+    ]
+    completion_kwargs = dict(
+        model=model,
+        messages=api_messages,
+        temperature=temperature,
+        max_tokens=max_tokens,
+        api_key=api_key,
+    )
+    if api_base:
+        completion_kwargs["api_base"] = api_base
+    response = litellm.completion(**completion_kwargs)
+    return {
+        "model": response["model"],
+        "content": response["choices"][0]["message"]["content"],
+    }
+
+
+def analyze_transcript(
+    model: str,
+    temperature: float,
+    max_tokens: int,
+    api_key: str,
+    api_base: str = None,
+):
+    """Render the AI analysis UI for a YouTube transcript.
+
+    Reads the SRT transcript and video metadata from ``st.session_state``
+    and offers *Summarize* or *Extract Key Points* analysis.  Results are
+    cached per ``(video_id, analysis_type, model, temperature, max_tokens)``.
+
+    Args:
+        model: LiteLLM model identifier.
+        temperature: Sampling temperature.
+        max_tokens: Max tokens for the response.
+        api_key: Provider API key.
+        api_base: Optional provider base URL.
+    """
+    srt_string = ""
+    serp = st.session_state.get("serp_transcript")
+    if serp:
+        srt_string = serp_transcript_to_srt(serp)
+
+    video_id = st.session_state.get("youtube_video_id", "")
+    metadata = st.session_state.get("video_metadata") or {}
+    title = metadata.get("title", "Unknown")
+    description = metadata.get("description", "")
+
+    st.subheader("🤖 AI Analysis")
+
+    analysis_type = st.radio(
+        "Select analysis type",
+        options=["Summarize", "Extract Key Points"],
+        horizontal=True,
+    )
+
+    context_block = (
+        f"Video title: {title}\n"
+        f"Video description: {description}\n\n"
+        f"Transcript (SRT format with timestamps):\n{srt_string}"
+    )
+
+    system_prompt = (
+        "You are a helpful assistant that analyzes YouTube video transcripts. "
+        "The transcript is provided in SRT format with timestamps in "
+        "HH:MM:SS,mmm format. When referencing specific parts of the video, "
+        "always cite the timestamp in HH:MM:SS,mmm format so the reader can "
+        "locate the source."
+    )
+
+    if analysis_type == "Summarize":
+        user_prompt = (
+            "Summarize the following YouTube video transcript concisely, "
+            "highlighting the main points and key takeaways. "
+            "Cite timestamps for each major point.\n\n"
+            f"{context_block}"
+        )
+    else:  # Extract Key Points
+        user_prompt = (
+            "Extract and list the key points from the following YouTube video "
+            "transcript. For each key point, include the timestamp where it "
+            "appears.\n\n"
+            f"{context_block}"
+        )
+
+    if not api_key:
+        st.warning("API key in the sidebar required for AI Analysis")
+        return
+
+    if st.button("🔍 Analyze", use_container_width=True):
+        with st.spinner("Analyzing transcript..."):
+            try:
+                result = _cached_analysis(
+                    video_id=video_id,
+                    analysis_type=analysis_type,
+                    _system_prompt=system_prompt,
+                    _user_prompt=user_prompt,
+                    model=model,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    api_key=api_key,
+                    api_base=api_base,
+                )
+                st.subheader("Analysis Result")
+                st.caption(f"response from {result['model']}")
+                st.write(result["content"])
+            except Exception as e:
+                st.error(f"Error during analysis: {str(e)}")
+
+
 def youtube_transcript(
     model: str,
     temperature: float,
@@ -171,65 +316,13 @@ def youtube_transcript(
                 tab_srt.info("No timed transcript available to convert to SRT.")
 
         # AI Analysis section
-        st.subheader("🤖 AI Analysis")
-
-        analysis_type = st.radio(
-            "Select analysis type",
-            options=["Summarize", "Ask Questions", "Extract Key Points"],
-            horizontal=True,
+        analyze_transcript(
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            api_key=api_key,
+            api_base=api_base,
         )
-
-        # Analysis prompts
-        if analysis_type == "Summarize":
-            system_prompt = "You are a helpful assistant. Summarize the following YouTube transcript concisely, highlighting the main points and key takeaways."
-            user_prompt = f"Please summarize this transcript:\n\n{st.session_state.youtube_transcript}"
-        elif analysis_type == "Ask Questions":
-            user_input = st.text_input("Ask a question about the transcript content:")
-            if user_input:
-                system_prompt = "You are a helpful assistant. Answer questions about the provided YouTube transcript accurately and thoroughly."
-                user_prompt = f"Transcript:\n{st.session_state.youtube_transcript}\n\nQuestion: {user_input}"
-            else:
-                st.info("Enter a question to analyze the transcript.")
-                return
-        else:  # Extract Key Points
-            system_prompt = "You are a helpful assistant. Extract and list the key points from the following YouTube transcript."
-            user_prompt = f"Extract key points from this transcript:\n\n{st.session_state.youtube_transcript}"
-
-        # Analyze button
-        if not api_key:
-            st.warning("API key in the sidebar required for AI Analysis")
-            return None
-
-        if st.button("🔍 Analyze", use_container_width=True):
-            with st.spinner("Analyzing transcript..."):
-                try:
-                    api_messages = [
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt},
-                    ]
-
-                    # Call litellm
-                    completion_kwargs = dict(
-                        model=model,
-                        messages=api_messages,
-                        temperature=temperature,
-                        max_tokens=max_tokens,
-                        api_key=api_key,
-                    )
-                    if api_base:
-                        completion_kwargs["api_base"] = api_base
-                    stream = litellm.completion(**completion_kwargs)
-
-                    # Display streamed response
-                    st.subheader("Analysis Result")
-                    st.caption(f"response from {stream['model']}")
-                    st.write(stream["choices"][0]["message"]["content"])
-
-                    # for unsupported stream, we need to write a wrapper: https://docs.streamlit.io/develop/api-reference/write-magic/st.write_stream
-                    # response_content = st.write_stream(stream)
-
-                except Exception as e:
-                    st.error(f"Error during analysis: {str(e)}")
 
 
 def main():

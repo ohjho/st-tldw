@@ -304,6 +304,40 @@ def ms_to_srt_timestamp(ms: int) -> str:
     return f"{hours:02d}:{minutes:02d}:{seconds:02d},{milliseconds:03d}"
 
 
+def srt_timestamp_to_seconds(timestamp: str) -> int:
+    """Convert an SRT timestamp to whole seconds.
+
+    Parses timestamps in ``HH:MM:SS,mmm`` format and returns the
+    equivalent time in whole seconds (truncated), suitable for use
+    in YouTube ``&t=`` URL parameters.
+
+    Args:
+        timestamp: SRT-format timestamp (e.g. ``"01:02:03,456"``).
+
+    Returns:
+        Time in whole seconds.
+
+    Examples:
+        >>> srt_timestamp_to_seconds("00:00:00,000")
+        0
+        >>> srt_timestamp_to_seconds("00:01:30,500")
+        90
+        >>> srt_timestamp_to_seconds("01:01:01,001")
+        3661
+        >>> srt_timestamp_to_seconds("invalid")
+        0
+    """
+    try:
+        time_part = timestamp.split(",")[0]
+        parts = time_part.split(":")
+        hours = int(parts[0])
+        minutes = int(parts[1])
+        seconds = int(parts[2])
+        return hours * 3600 + minutes * 60 + seconds
+    except Exception:
+        return 0
+
+
 def serp_transcript_to_srt(transcript: Optional[List[Dict]]) -> str:
     """Convert a SerpApi-style transcript to SRT format.
 
