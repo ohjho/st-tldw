@@ -340,3 +340,40 @@ def serp_transcript_to_srt(transcript: Optional[List[Dict]]) -> str:
         idx += 1
 
     return "\n".join(srt_lines)
+
+
+def copy_to_clipboard_button(text: str, label: str = "🔗 Copy share link") -> None:
+    """Render a button that copies text to the clipboard on click.
+
+    Uses ``st.html`` with inline JavaScript and the browser
+    ``navigator.clipboard`` API.  The button briefly shows a
+    "Copied!" confirmation before reverting to its original label.
+
+    Args:
+        text: The string to copy to the clipboard.
+        label: Button label displayed to the user.
+
+    Examples:
+        >>> copy_to_clipboard_button("https://example.com")  # doctest: +SKIP
+    """
+    import html as html_mod
+
+    safe_text = html_mod.escape(text, quote=True)
+    safe_label = html_mod.escape(label, quote=True)
+    st.html(
+        f"""
+        <button onclick="
+            navigator.clipboard.writeText('{safe_text}');
+            this.textContent='✅ Copied!';
+            setTimeout(() => this.textContent='{safe_label}', 2000);
+        " style="
+            padding: 4px 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            background: transparent;
+            cursor: pointer;
+            font-size: 14px;
+        ">{safe_label}</button>
+        """,
+        unsafe_allow_javascript=True,
+    )

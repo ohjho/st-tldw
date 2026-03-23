@@ -44,11 +44,15 @@ def chat_with_rag(
     temperature: float,
     max_tokens: int,
     api_key: str,
+    st_settings_container,
     default_method: str = None,
     api_base: str = None,
 ):
     """RAG chat interface over an SRT transcript string."""
-    st.header("💬 Chat with Transcript")
+    cols = st.columns((90, 10))
+    cols[0].markdown(
+        "### :material/chat:", help=f"ask {model} questions about your video here..."
+    )
 
     if not srt_string:
         st.info(
@@ -71,20 +75,31 @@ def chat_with_rag(
             st.session_state[key] = default
 
     # Retrieval method selector
-    method_options = ["BM25 (Keyword)", "Semantic (BGE)"]
-    default_index = 1 if default_method and default_method.lower() == "semantic" else 0
-    retrieval_method = st.radio(
-        "Retrieval method",
-        options=method_options,
-        index=default_index,
-        horizontal=True,
-        help="BM25: fast keyword matching, no model download. Semantic: neural embeddings (~130MB first-run download), understands synonyms.",
-    )
+    with st_settings_container:
+        method_options = ["Semantic (BGE)", "BM25 (Keyword)"]
+        default_index = (
+            1 if default_method and default_method.lower() == "semantic" else 0
+        )
+        retrieval_method = st.radio(
+            "Chat's Retrieval method",
+            options=method_options,
+            index=default_index,
+            horizontal=True,
+            help="BM25: fast keyword matching, no model download. Semantic: neural embeddings (~130MB first-run download), understands synonyms.",
+        )
+        num_chunks = st.slider(
+            "Retrieved chunks",
+            min_value=1,
+            max_value=10,
+            value=5,
+            help="Number of transcript chunks retrieved per question.",
+        )
 
     # Build/rebuild retriever when transcript or method changes
     needs_rebuild = (
         srt_string != st.session_state.rag_indexed_srt
         or retrieval_method != st.session_state.rag_retrieval_method
+        or num_chunks != st.session_state.get("rag_num_chunks", 5)
     )
 
     if needs_rebuild:
@@ -96,15 +111,25 @@ def chat_with_rag(
         with st.spinner(spinner_msg):
             chunks = _split_srt(srt_string)
             if "BM25" in retrieval_method:
-                st.session_state.rag_retriever = _build_bm25_retriever(chunks)
+                st.session_state.rag_retriever = _build_bm25_retriever(
+                    chunks, k=num_chunks
+                )
             else:
-                st.session_state.rag_retriever = _build_faiss_retriever(chunks)
+                st.session_state.rag_retriever = _build_faiss_retriever(
+                    chunks, k=num_chunks
+                )
             st.session_state.rag_indexed_srt = srt_string
             st.session_state.rag_retrieval_method = retrieval_method
+            st.session_state.rag_num_chunks = num_chunks
             st.session_state.rag_messages = []
 
     # Clear chat button
-    if st.button("🗑️ Clear Chat", use_container_width=False):
+    if cols[1].button(
+        ":material/delete:",
+        width="stretch",
+        help="clear chat",
+        type="tertiary",
+    ):
         st.session_state.rag_messages = []
         st.rerun()
 
@@ -114,7 +139,7 @@ def chat_with_rag(
             st.markdown(msg["content"])
 
     # Chat input
-    if prompt := st.chat_input("Ask about the transcript..."):
+    if prompt := st.chat_input("Ask any questions about the video"):
         # Display user message
         st.session_state.rag_messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):

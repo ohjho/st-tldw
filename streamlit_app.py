@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 
 from chat_interface import chat_with_rag
 from utils import (
+    copy_to_clipboard_button,
     extract_video_id,
     get_serpapi_searches_left,
     get_video_metadata_youtube_api,
@@ -27,10 +28,11 @@ def youtube_transcript(
     temperature: float,
     max_tokens: int,
     api_key: str,
+    st_data_container,
     api_base: str = None,
 ):
     """Extract and display YouTube transcript with optional AI summarization."""
-    st.header("📺 YouTube Transcript Extractor")
+    # st.header("📺 YouTube Transcript Extractor")
 
     assert SERPAPI_KEY, f"SERPAPI_KEY not found in ENV"
 
@@ -47,15 +49,16 @@ def youtube_transcript(
             st.session_state[v] = ""
 
     # URL input
-    col1, col2 = st.columns([0.85, 0.15])
+    col1, col2 = st.columns([90, 10])
     with col1:
         youtube_url = st.text_input(
             "Enter YouTube URL",
-            placeholder="https://www.youtube.com/watch?v=... or paste video ID",
+            placeholder="Enter YouTube URL, e.g. https://www.youtube.com/watch?v=... or paste video ID",
             help="Paste a YouTube URL or just the video ID",
+            label_visibility="collapsed",
         )
     with col2:
-        fetch_button = st.button("Fetch Transcript", use_container_width=True)
+        fetch_button = st.button(":material/replay:", width="content")
 
     # Fetch transcript if button clicked
     if fetch_button and youtube_url:
@@ -88,20 +91,29 @@ def youtube_transcript(
 
     # Display transcript if available
     if st.session_state.youtube_transcript:
-        st.divider()
-
         # Display video embed
         if st.session_state.youtube_video_id:
-            st.subheader("Video Preview")
+            # st.subheader("Video Preview")
             st.video(
                 f"https://www.youtube.com/embed/{st.session_state.youtube_video_id}"
             )
 
-        # Transcript display section
-        st.subheader("📄 Transcript")
+        with st_data_container:
+            # st.metric(
+            #     "Transcript Length",
+            #     f"{len(st.session_state.youtube_transcript)} characters",
+            # )
+            st.metric("Word Count", len(st.session_state.youtube_transcript.split()))
 
-        col1, col2 = st.columns([0.7, 0.3])
-        with col1:
+            # Copy to clipboard and share link
+            if st.session_state.youtube_video_id:
+                base_url = os.getenv("APP_BASE_URL", "http://localhost:8501")
+                share_url = f"{base_url}/?v={st.session_state.youtube_video_id}"
+                st.caption("Share this link:")
+                st.code(share_url, wrap_lines=True)
+                # copy_to_clipboard_button(share_url)
+
+            # Transcript display section
             tab_text, tab_json, tab_srt = st.tabs(
                 [
                     ":material/article:",
@@ -109,6 +121,7 @@ def youtube_transcript(
                     ":material/closed_caption:",
                 ]
             )
+            tab_text.caption("Transcript")
             tab_text.text_area(
                 "Full Transcript",
                 value=st.session_state.youtube_transcript,
@@ -118,7 +131,9 @@ def youtube_transcript(
             )
 
             # Show JSON/raw transcript returned by SerpApi
-            tab_json.write(st.session_state.serp_transcript)
+            with tab_json:
+                st.caption("Raw Transcript")
+                st.write(st.session_state.serp_transcript)
 
             # Convert to SRT string and provide download button in the SRT tab
             serp = st.session_state.serp_transcript
@@ -154,25 +169,6 @@ def youtube_transcript(
                 )
             else:
                 tab_srt.info("No timed transcript available to convert to SRT.")
-
-        with col2:
-            st.metric(
-                "Transcript Length",
-                f"{len(st.session_state.youtube_transcript)} characters",
-            )
-            st.metric("Word Count", len(st.session_state.youtube_transcript.split()))
-
-        # Copy to clipboard and share link
-        col_copy, col_share = st.columns(2)
-        with col_copy:
-            st.button("📋 Copy Transcript", key="copy_transcript")
-        with col_share:
-            if st.session_state.youtube_video_id:
-                base_url = os.getenv("APP_BASE_URL", "http://localhost:8501")
-                share_url = f"{base_url}/?v={st.session_state.youtube_video_id}"
-                st.code(share_url, language=None)
-
-        st.divider()
 
         # AI Analysis section
         st.subheader("🤖 AI Analysis")
@@ -242,6 +238,7 @@ def main():
         page_title="ST-TLDW",
         page_icon="🎬",
         layout="wide",
+        initial_sidebar_state="collapsed",
     )
 
     st.title("🎬 ST-TLDW: Streamlit YouTube Transcript & LLM Chat")
@@ -283,93 +280,104 @@ def main():
 
     # Sidebar for analysis configuration
     with st.sidebar:
-        st.title("⚙️ Analysis Configuration")
-
-        # Provider selection
-        provider = st.radio(
-            "Provider",
-            options=["Ollama Cloud", "OpenRouter"],
-            horizontal=True,
-        )
-
-        api_base = None
-
-        if provider == "OpenRouter":
-            model = st.selectbox(
-                "Select Model",
-                options=[
-                    "openrouter/openrouter/free",
-                    "openrouter/google/gemma-3-4b-it:free",
-                    "openrouter/mistralai/mistral-small-3.1-24b-instruct:free",
-                ],
-                help="Select an OpenRouter model for analysis",
-            )
-        else:
-            ollama_model = st.selectbox(
-                "Select Model",
-                options=[
-                    "qwen3.5",
-                    "deepseek-v3.2",
-                    "gemini-3-flash-preview",
-                ],
-                accept_new_options=True,
-                help="Select an Ollama Cloud model or type a custom name",
-            )
-            model = f"ollama/{ollama_model}"
-            api_base = "https://ollama.com"
-
-        # API Key input
-        custom_api_key = st.text_input(
-            "API Key",
-            type="password",
-            help="Enter your own API key for the selected model provider",
-        )
-        api_key = custom_api_key if custom_api_key else DEFAULT_OLLAMA_API_KEY
-
-        # Temperature slider
-        temperature = st.slider(
-            "Temperature",
-            min_value=0.0,
-            max_value=1.0,
-            value=0.2,
-            step=0.1,
-        )
-
-        # Max tokens slider
-        max_tokens = st.slider(
-            "Max Tokens",
-            min_value=100,
-            max_value=4096,
-            value=2048,
-            step=100,
-        )
-
-        st.divider()
-        if st.button("🗑️ Clear Session", use_container_width=True):
+        if st.button(
+            ":material/delete:",
+            width="content",
+            type="tertiary",
+            help="clear context and start over!",
+        ):
             st.session_state.clear()
             st.query_params.clear()
             st.rerun()
 
-        if SERPAPI_KEY:
-            searches_left = get_serpapi_searches_left(SERPAPI_KEY)
-            if searches_left is not None:
-                st.metric("SerpAPI Searches Left", searches_left)
+        tab_readme, tab_settings, tab_metrics = st.tabs(
+            [":material/article:", ":material/settings:", ":material/electric_meter:"]
+        )
+        with tab_settings:
+            # Provider selection
+            provider = "Ollama"
+            # provider = st.radio(
+            #     "Provider",
+            #     options=["Ollama Cloud", "OpenRouter"],
+            #     horizontal=True,
+            # )
+
+            api_base = None
+
+            if provider == "OpenRouter":
+                model = st.selectbox(
+                    "Select Model",
+                    options=[
+                        "openrouter/openrouter/free",
+                        "openrouter/google/gemma-3-4b-it:free",
+                        "openrouter/mistralai/mistral-small-3.1-24b-instruct:free",
+                    ],
+                    help="Select an OpenRouter model for analysis",
+                )
             else:
-                st.warning("Could not fetch SerpAPI account info")
+                ollama_model = st.selectbox(
+                    "Select Model",
+                    options=[
+                        "qwen3.5",
+                        "deepseek-v3.2",
+                        "gemini-3-flash-preview",
+                    ],
+                    accept_new_options=True,
+                    help="Select an [Ollama Cloud model](https://ollama.com/search?c=cloud) or type a custom name",
+                )
+                model = f"ollama/{ollama_model}"
+                api_base = "https://ollama.com"
+
+            # API Key input
+            custom_api_key = None
+            # custom_api_key = st.text_input(
+            #     "API Key",
+            #     type="password",
+            #     help="Enter your own API key for the selected model provider",
+            # )
+            api_key = custom_api_key if custom_api_key else DEFAULT_OLLAMA_API_KEY
+
+            # Temperature slider
+            temperature = st.slider(
+                "Temperature",
+                min_value=0.0,
+                max_value=1.0,
+                value=0.2,
+                step=0.1,
+            )
+
+            # Max tokens slider
+            max_tokens = st.slider(
+                "Max Tokens",
+                min_value=100,
+                max_value=4096,
+                value=2048,
+                step=100,
+            )
+
+        with tab_metrics:
+            if SERPAPI_KEY:
+                searches_left = get_serpapi_searches_left(SERPAPI_KEY)
+                if searches_left is not None:
+                    st.metric("SerpAPI Searches Left", searches_left)
+                else:
+                    st.warning("Could not fetch SerpAPI account info")
 
     # Navigation tabs
-    tab1, tab2 = st.tabs(["📺 YouTube Transcript", "💬 Chat"])
+    # tab1, tab2 = st.tabs(["📺 YouTube Transcript", "💬 Chat"])
+    lcol, rcol = st.columns((6, 4))
 
-    with tab1:
+    with lcol:
         youtube_transcript(
             model=model,
             api_key=api_key,
             temperature=temperature,
             max_tokens=max_tokens,
             api_base=api_base,
+            st_data_container=tab_metrics,
         )
 
-    with tab2:
+    with rcol:
         srt_for_rag = ""
         if st.session_state.get("serp_transcript"):
             srt_for_rag = serp_transcript_to_srt(st.session_state.serp_transcript)
@@ -381,6 +389,7 @@ def main():
             api_key=api_key,
             default_method=url_method,
             api_base=api_base,
+            st_settings_container=tab_settings,
         )
 
 
