@@ -45,6 +45,7 @@ def chat_with_rag(
     max_tokens: int,
     api_key: str,
     default_method: str = None,
+    api_base: str = None,
 ):
     """RAG chat interface over an SRT transcript string."""
     st.header("💬 Chat with Transcript")
@@ -142,13 +143,16 @@ def chat_with_rag(
         messages.append(HumanMessage(content=prompt))
 
         # Stream response
-        llm = ChatLiteLLM(
+        llm_kwargs = dict(
             model=model,
             temperature=temperature,
             max_tokens=max_tokens,
             api_key=api_key,
             streaming=True,
         )
+        if api_base:
+            llm_kwargs["api_base"] = api_base
+        llm = ChatLiteLLM(**llm_kwargs)
 
         with st.chat_message("assistant"):
             try:

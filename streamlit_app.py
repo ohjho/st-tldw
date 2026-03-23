@@ -20,7 +20,13 @@ SERPAPI_KEY = os.getenv("SERPAPI_KEY", None)
 DEFAULT_API_KEY = os.environ.get("OPENROUTER_API_KEY", None)
 
 
-def youtube_transcript(model: str, temperature: float, max_tokens: int, api_key: str):
+def youtube_transcript(
+    model: str,
+    temperature: float,
+    max_tokens: int,
+    api_key: str,
+    api_base: str = None,
+):
     """Extract and display YouTube transcript with optional AI summarization."""
     st.header("📺 YouTube Transcript Extractor")
 
@@ -204,15 +210,17 @@ def youtube_transcript(model: str, temperature: float, max_tokens: int, api_key:
                         {"role": "user", "content": user_prompt},
                     ]
 
-                    # Call litellm with streaming
-                    stream = litellm.completion(
+                    # Call litellm
+                    completion_kwargs = dict(
                         model=model,
                         messages=api_messages,
                         temperature=temperature,
                         max_tokens=max_tokens,
-                        # stream=True,
                         api_key=api_key,
                     )
+                    if api_base:
+                        completion_kwargs["api_base"] = api_base
+                    stream = litellm.completion(**completion_kwargs)
 
                     # Display streamed response
                     st.subheader("Analysis Result")
@@ -275,16 +283,38 @@ def main():
     with st.sidebar:
         st.title("⚙️ Analysis Configuration")
 
-        # Model selection
-        model = st.selectbox(
-            "Select Model",
-            options=[
-                "openrouter/openrouter/free",
-                "openrouter/google/gemma-3-4b-it:free",
-                "openrouter/mistralai/mistral-small-3.1-24b-instruct:free",
-            ],
-            help="Select an LLM model for analysis",
+        # Provider selection
+        provider = st.radio(
+            "Provider",
+            options=["OpenRouter", "Ollama Cloud"],
+            horizontal=True,
         )
+
+        api_base = None
+
+        if provider == "OpenRouter":
+            model = st.selectbox(
+                "Select Model",
+                options=[
+                    "openrouter/openrouter/free",
+                    "openrouter/google/gemma-3-4b-it:free",
+                    "openrouter/mistralai/mistral-small-3.1-24b-instruct:free",
+                ],
+                help="Select an OpenRouter model for analysis",
+            )
+        else:
+            ollama_model = st.selectbox(
+                "Select Model",
+                options=[
+                    "qwen3.5",
+                    "deepseek-v3.2",
+                    "gemini-3-flash-preview",
+                ],
+                accept_new_options=True,
+                help="Select an Ollama Cloud model or type a custom name",
+            )
+            model = f"ollama/{ollama_model}"
+            api_base = "https://ollama.com"
 
         # API Key input
         custom_api_key = st.text_input(
@@ -293,12 +323,6 @@ def main():
             help="Enter your own API key for the selected model provider",
         )
         api_key = custom_api_key if custom_api_key else DEFAULT_API_KEY
-
-        if api_key:
-            if "gpt" in model:
-                litellm.api_key = api_key
-            elif "claude" in model:
-                litellm.api_key = api_key
 
         # Temperature slider
         temperature = st.slider(
@@ -336,7 +360,11 @@ def main():
 
     with tab1:
         youtube_transcript(
-            model=model, api_key=api_key, temperature=temperature, max_tokens=max_tokens
+            model=model,
+            api_key=api_key,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            api_base=api_base,
         )
 
     with tab2:
@@ -350,6 +378,7 @@ def main():
             max_tokens=max_tokens,
             api_key=api_key,
             default_method=url_method,
+            api_base=api_base,
         )
 
 
