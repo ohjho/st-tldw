@@ -50,15 +50,16 @@ def chat_with_rag(
 ):
     """RAG chat interface over an SRT transcript string."""
     cols = st.columns((90, 10))
-    cols[0].markdown(
-        "### :material/chat:", help=f"ask {model} questions about your video here..."
-    )
 
     if not srt_string:
-        st.info(
-            "Fetch a transcript in the YouTube tab first, then come here to chat about it."
-        )
-        return
+        return None
+        # st.info(
+        #     "Fetch a transcript in the YouTube tab first, then come here to chat about it."
+        # )
+        # return
+    cols[0].markdown(
+        "### :material/chat:", help=f"Chat with {model} about your video here..."
+    )
 
     if not api_key:
         st.warning("API key required for RAG chat. Set it in the sidebar.")
@@ -125,9 +126,9 @@ def chat_with_rag(
 
     # Clear chat button
     if cols[1].button(
-        ":material/delete:",
+        ":material/replay:",
         width="stretch",
-        help="clear chat",
+        help="clear chat context",
         type="tertiary",
     ):
         st.session_state.rag_messages = []
@@ -139,7 +140,7 @@ def chat_with_rag(
             st.markdown(msg["content"])
 
     # Chat input
-    if prompt := st.chat_input("Ask any questions about the video"):
+    if prompt := st.chat_input("Ask any thing about this video"):
         # Display user message
         st.session_state.rag_messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):

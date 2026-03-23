@@ -194,16 +194,17 @@ def youtube_transcript(
             st.session_state[v] = ""
 
     # URL input
+    st.caption("too long; don't watch", help="open left sidebar for settings")
     col1, col2 = st.columns([90, 10])
     with col1:
         youtube_url = st.text_input(
-            "Enter YouTube URL",
+            "Too Long; Don't Watch",
             placeholder="Enter YouTube URL, e.g. https://www.youtube.com/watch?v=... or paste video ID",
-            help="Paste a YouTube URL or just the video ID",
+            help="open left sidebar for settings",
             label_visibility="collapsed",
         )
     with col2:
-        fetch_button = st.button(":material/replay:", width="content")
+        fetch_button = st.button("GO", width="content")
 
     # Fetch transcript if button clicked
     if fetch_button and youtube_url:
@@ -328,13 +329,13 @@ def youtube_transcript(
 def main():
     """Main application."""
     st.set_page_config(
-        page_title="ST-TLDW",
-        page_icon="🎬",
+        page_title="tl;dw",
+        page_icon="asset/logo_icon.png",
         layout="wide",
         initial_sidebar_state="collapsed",
     )
-    st.logo("asset/logo_icon.png", size="large", icon_image="asset/logo_large.png")
-    st.title("🎬 ST-TLDW: Streamlit YouTube Transcript & LLM Chat")
+    st.logo("asset/logo_large.png", size="large", icon_image="asset/logo_icon.png")
+    # st.title("🎬 ST-TLDW: Streamlit YouTube Transcript & LLM Chat")
 
     # Read URL query params for session sharing
     qp = st.query_params
@@ -387,6 +388,7 @@ def main():
             [":material/article:", ":material/settings:", ":material/electric_meter:"]
         )
         with tab_settings:
+            st.caption(f"LLM settings:")
             # Provider selection
             provider = "Ollama"
             # provider = st.radio(
