@@ -240,7 +240,7 @@ def main():
         layout="wide",
         initial_sidebar_state="collapsed",
     )
-
+    st.logo("asset/logo_icon.png", size="large", icon_image="asset/logo_large.png")
     st.title("🎬 ST-TLDW: Streamlit YouTube Transcript & LLM Chat")
 
     # Read URL query params for session sharing
