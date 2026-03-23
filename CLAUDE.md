@@ -34,6 +34,7 @@ uv sync
 - **`get_video_metadata_youtube_api()`** - Cached (`@st.cache_data(ttl="1d")`) call to the YouTube Data API v3. Returns rich metadata: title, description, channel, publish date, tags, view/like counts, duration, and thumbnail. Requires `YOUTUBE_API_KEY`.
 - **`get_serpapi_searches_left()`** - Cached (5min TTL) call to SerpAPI account endpoint; displays remaining searches in the sidebar.
 - **`serp_transcript_to_srt()`** / **`ms_to_srt_timestamp()`** - Convert SerpAPI transcript format to SRT subtitle format with download support.
+- **`srt_timestamp_to_seconds()`** - Convert SRT timestamp (`HH:MM:SS,mmm`) to whole seconds for YouTube `&t=` URL parameters.
 
 ### `chat_interface.py` — RAG chat module
 
