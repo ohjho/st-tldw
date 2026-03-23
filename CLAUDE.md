@@ -25,6 +25,7 @@ uv sync
 - **`get_youtube_transcript_serpapi()`** - Cached (`@st.cache_data(ttl="1d")`) SerpAPI call to fetch YouTube transcripts. Primary transcript source.
 - **`get_youtube_transcript()`** - Alternative transcript fetcher using `youtube-transcript-api` directly (currently unused, kept as fallback).
 - **`serp_transcript_to_srt()`** / **`ms_to_srt_timestamp()`** - Convert SerpAPI transcript format to SRT subtitle format with download support.
+- **`get_video_metadata_oembed()`** - Cached (`@st.cache_data(ttl="1d")`) call to the free YouTube oEmbed endpoint. Returns video title, author name/URL, and thumbnail URL. No API key required.
 - **`get_serpapi_searches_left()`** - Cached (5min TTL) call to SerpAPI account endpoint; displays remaining searches in the sidebar.
 - **`chat_interface()`** - Legacy standalone chat UI (not wired up, superseded by RAG chat).
 
@@ -43,7 +44,7 @@ uv sync
 - **LLM routing**: Uses litellm with OpenRouter free-tier models by default (e.g., `openrouter/google/gemma-3-4b-it:free`). RAG chat uses langchain's `ChatLiteLLM` wrapper.
 - **RAG dependencies**: langchain, langchain-community, faiss-cpu, rank-bm25, sentence-transformers, langchain-huggingface.
 - **URL query params**: `?v=VIDEO_ID` auto-loads a transcript on page load; `?method=semantic` pre-selects the RAG retrieval method.
-- **Session state keys**: `youtube_url`, `youtube_video_id`, `youtube_transcript`, `serp_transcript`, `messages`, `api_key_set`, `rag_messages`, `rag_retriever`, `rag_indexed_srt`, `rag_retrieval_method`.
+- **Session state keys**: `youtube_url`, `youtube_video_id`, `youtube_transcript`, `serp_transcript`, `video_metadata`, `messages`, `api_key_set`, `rag_messages`, `rag_retriever`, `rag_indexed_srt`, `rag_retrieval_method`.
 
 ## Guidelines
 

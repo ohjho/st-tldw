@@ -119,6 +119,54 @@ def get_youtube_transcript_serpapi(video_id: str, serpapi_key: str) -> dict:
         }
 
 
+@st.cache_data(ttl="1d")
+def get_video_metadata_oembed(video_id: str) -> dict:
+    """Fetch video metadata from the YouTube oEmbed endpoint.
+
+    Uses the free, unauthenticated YouTube oEmbed API to retrieve basic
+    metadata such as title, author name, author URL, and thumbnail URL.
+
+    Args:
+        video_id: YouTube video ID (e.g. ``"dQw4w9WgXcQ"``).
+
+    Returns:
+        A dict with keys ``success``, ``title``, ``author_name``,
+        ``author_url``, ``thumbnail_url``, and ``error``.
+
+    Examples:
+        >>> result = get_video_metadata_oembed.__wrapped__("dQw4w9WgXcQ")
+        >>> result["success"]
+        True
+        >>> result["title"] != ""
+        True
+    """
+    url = (
+        f"https://www.youtube.com/oembed"
+        f"?url=https://www.youtube.com/watch?v={video_id}&format=json"
+    )
+    try:
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        return {
+            "success": True,
+            "title": data.get("title", ""),
+            "author_name": data.get("author_name", ""),
+            "author_url": data.get("author_url", ""),
+            "thumbnail_url": data.get("thumbnail_url", ""),
+            "error": None,
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "title": "",
+            "author_name": "",
+            "author_url": "",
+            "thumbnail_url": "",
+            "error": str(e),
+        }
+
+
 def ms_to_srt_timestamp(ms: int) -> str:
     """Convert milliseconds to SRT timestamp format: HH:MM:SS,mmm"""
     # Handle non-int inputs gracefully
@@ -173,6 +221,7 @@ def youtube_transcript(model: str, temperature: float, max_tokens: int, api_key:
         "youtube_video_id",
         "youtube_transcript",
         "serp_transcript",
+        "video_metadata",
     ]
     for v in stored_values:
         if v not in st.session_state:
@@ -208,6 +257,9 @@ def youtube_transcript(model: str, temperature: float, max_tokens: int, api_key:
                 if result["success"]:
                     st.session_state.youtube_transcript = result["transcript"]
                     st.session_state.serp_transcript = result["raw_transcript"]
+                    st.session_state.video_metadata = get_video_metadata_oembed(
+                        video_id
+                    )
                     st.query_params["v"] = video_id
                     st.success("✅ Transcript extracted successfully!")
                 else:
@@ -397,6 +449,9 @@ def main():
                 st.session_state.youtube_video_id = url_video_id
                 st.session_state.youtube_transcript = result["transcript"]
                 st.session_state.serp_transcript = result["raw_transcript"]
+                st.session_state.video_metadata = get_video_metadata_oembed(
+                    url_video_id
+                )
                 st.session_state.youtube_url = (
                     f"https://www.youtube.com/watch?v={url_video_id}"
                 )
