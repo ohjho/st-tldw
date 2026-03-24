@@ -162,7 +162,9 @@ def analyze_transcript(
             )
         st.caption(f"response from {result['model']}")
         if video_id:
-            render_markdown_with_timestamps(result["content"], video_id)
+            render_markdown_with_timestamps(
+                result["content"], video_id, open_in_new_tab=True, use_youtube_url=True
+            )
         else:
             st.write(result["content"])
     except Exception as e:

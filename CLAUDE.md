@@ -35,7 +35,7 @@ uv sync
 - **`get_serpapi_searches_left()`** - Cached (5min TTL) call to SerpAPI account endpoint; displays remaining searches in the sidebar.
 - **`serp_transcript_to_srt()`** / **`ms_to_srt_timestamp()`** - Convert SerpAPI transcript format to SRT subtitle format with download support.
 - **`copy_to_clipboard_button()`** - Render an HTML button via `st.html` that copies arbitrary text to the clipboard using `navigator.clipboard`.
-- **`render_markdown_with_timestamps()`** - Render LLM markdown with clickable timestamp links. Regex-finds `H:MM:SS`/`HH:MM:SS` patterns and converts them to `<a href="?v=ID&t=SECONDS">` links via `st.markdown(unsafe_allow_html=True)`. Reuses `srt_timestamp_to_seconds()` for conversion.
+- **`render_markdown_with_timestamps()`** - Render LLM markdown with clickable timestamp links. Regex-finds `H:MM:SS`/`HH:MM:SS` patterns and converts them to `<a>` links via `st.markdown(unsafe_allow_html=True)`. Supports `open_in_new_tab` (adds `target="_blank"`) and `use_youtube_url` (links to youtube.com instead of in-app relative URL). Reuses `srt_timestamp_to_seconds()` for conversion.
 - **`srt_timestamp_to_seconds()`** - Convert SRT timestamp (`HH:MM:SS,mmm`) to whole seconds for YouTube `&t=` URL parameters. Also handles `H:MM:SS` without milliseconds.
 
 ### `chat_interface.py` — RAG chat module
