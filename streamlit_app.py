@@ -12,6 +12,7 @@ from utils import (
     get_serpapi_searches_left,
     get_video_metadata_youtube_api,
     get_youtube_transcript_serpapi,
+    render_markdown_with_timestamps,
     serp_transcript_to_srt,
 )
 
@@ -160,7 +161,10 @@ def analyze_transcript(
                 api_base=api_base,
             )
         st.caption(f"response from {result['model']}")
-        st.write(result["content"])
+        if video_id:
+            render_markdown_with_timestamps(result["content"], video_id)
+        else:
+            st.write(result["content"])
     except Exception as e:
         st.error(f"Error during analysis: {str(e)}")
 
@@ -185,10 +189,11 @@ def youtube_transcript(
         "youtube_transcript",
         "serp_transcript",
         "video_metadata",
+        "video_start_time",
     ]
     for v in stored_values:
         if v not in st.session_state:
-            st.session_state[v] = ""
+            st.session_state[v] = 0 if v == "video_start_time" else ""
 
     # URL input
     st.caption("too long; don't watch", help="open left sidebar for settings")
@@ -214,6 +219,7 @@ def youtube_transcript(
                 )
             else:
                 st.session_state.youtube_video_id = video_id
+                st.session_state.video_start_time = 0
                 # result = get_youtube_transcript(video_id)
                 result = get_youtube_transcript_serpapi(
                     video_id, serpapi_key=SERPAPI_KEY
@@ -238,7 +244,10 @@ def youtube_transcript(
         if st.session_state.youtube_video_id:
             # st.subheader("Video Preview")
             st.video(
-                f"https://www.youtube.com/embed/{st.session_state.youtube_video_id}"
+                f"https://www.youtube.com/embed/{st.session_state.youtube_video_id}",
+                start_time=st.session_state.get("video_start_time", 0),
+                autoplay=st.session_state.video_start_time > 0,
+                muted=True,
             )
 
         with st_data_container:
@@ -339,6 +348,12 @@ def main():
     qp = st.query_params
     url_video_id = qp.get("v", None)
     url_method = qp.get("method", None)
+    url_start_time = qp.get("t", None)
+    if url_start_time is not None:
+        try:
+            st.session_state.video_start_time = int(url_start_time)
+        except (ValueError, TypeError):
+            st.session_state.video_start_time = 0
 
     # Initialize session state
     if not DEFAULT_OLLAMA_API_KEY:

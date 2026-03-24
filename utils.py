@@ -376,6 +376,37 @@ def serp_transcript_to_srt(transcript: Optional[List[Dict]]) -> str:
     return "\n".join(srt_lines)
 
 
+def render_markdown_with_timestamps(
+    markdown_text: str, video_id: str
+) -> None:
+    """Render LLM markdown with clickable timestamps that seek the video.
+
+    Timestamps matching ``H:MM:SS`` or ``HH:MM:SS`` are converted to
+    clickable links that navigate to the same page with a ``&t=SECONDS``
+    query parameter, causing the video to start at that position.
+
+    Args:
+        markdown_text: The LLM-generated markdown string.
+        video_id: YouTube video ID used to build the link.
+
+    Examples:
+        >>> render_markdown_with_timestamps("point at 0:02:30", "abc")  # doctest: +SKIP
+    """
+    timestamp_re = re.compile(r"\b(\d{1,2}:\d{2}:\d{2})\b")
+
+    def _replace(match: re.Match) -> str:
+        ts = match.group(1)
+        seconds = srt_timestamp_to_seconds(ts)
+        return (
+            f'<a href="?v={video_id}&t={seconds}" '
+            f'style="color:#1a73e8;text-decoration:underline;cursor:pointer" '
+            f'title="Jump to {ts}">{ts}</a>'
+        )
+
+    processed = timestamp_re.sub(_replace, markdown_text)
+    st.markdown(processed, unsafe_allow_html=True)
+
+
 def copy_to_clipboard_button(text: str, label: str = "🔗 Copy share link") -> None:
     """Render a button that copies text to the clipboard on click.
 
