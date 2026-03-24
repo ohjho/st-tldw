@@ -348,7 +348,10 @@ def main():
     # hide_streamlit_chrome()
     float_init()
     st.markdown(
-        "<style>.block-container { padding-top: 1rem; }</style>",
+        "<style>"
+        ".block-container { padding-top: 1rem; }"
+        " a[href='https://streamlit.io/cloud'][target='_blank'] { display: none; }"
+        "</style>",
         unsafe_allow_html=True,
     )
     # st.title("🎬 ST-TLDW: Streamlit YouTube Transcript & LLM Chat")
