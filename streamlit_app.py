@@ -83,11 +83,11 @@ def analyze_transcript(
     api_key: str,
     api_base: str = None,
 ):
-    """Render the AI analysis UI for a YouTube transcript.
+    """Auto-run Summarize and Extract Key Points for a YouTube transcript.
 
     Reads the SRT transcript and video metadata from ``st.session_state``
-    and offers *Summarize* or *Extract Key Points* analysis.  Results are
-    cached per ``(video_id, analysis_type, model, temperature, max_tokens)``.
+    and runs both analyses automatically.  Results are cached per
+    ``(video_id, analysis_type, model, temperature, max_tokens)``.
 
     Args:
         model: LiteLLM model identifier.
@@ -101,18 +101,27 @@ def analyze_transcript(
     if serp:
         srt_string = serp_transcript_to_srt(serp)
 
+    if not srt_string:
+        return
+
+    if not api_key:
+        st.warning("API key in the sidebar required for AI Analysis")
+        return
+
     video_id = st.session_state.get("youtube_video_id", "")
     metadata = st.session_state.get("video_metadata") or {}
     title = metadata.get("title", "Unknown")
     description = metadata.get("description", "")
 
-    st.subheader("🤖 AI Analysis")
-
-    analysis_type = st.radio(
-        "Select analysis type",
-        options=["Summarize", "Extract Key Points"],
-        horizontal=True,
-    )
+    col_label, col_btn = st.columns([90, 10])
+    col_label.caption("AI Summary:")
+    if col_btn.button(
+        ":material/refresh:",
+        help="Clear cache and re-generate summary",
+        type="tertiary",
+    ):
+        _cached_analysis.clear()
+        st.rerun()
 
     context_block = (
         f"Video title: {title}\n"
@@ -123,49 +132,48 @@ def analyze_transcript(
     system_prompt = (
         "You are a helpful assistant that analyzes YouTube video transcripts. "
         "The transcript is provided in SRT format with timestamps in "
-        "HH:MM:SS,mmm format. When referencing specific parts of the video, "
-        "always cite the timestamp in HH:MM:SS,mmm format so the reader can "
-        "locate the source."
+        "HH:MM:SS,mmm format. Always cite the relevant timestamp "
+        "(HH:MM:SS format) next to each point or claim so the reader "
+        "can jump to that moment in the video."
     )
 
-    if analysis_type == "Summarize":
-        user_prompt = (
-            "Summarize the following YouTube video transcript concisely, "
-            "highlighting the main points and key takeaways. "
-            "Cite timestamps for each major point.\n\n"
-            f"{context_block}"
-        )
-    else:  # Extract Key Points
-        user_prompt = (
-            "Extract and list the key points from the following YouTube video "
-            "transcript. For each key point, include the timestamp where it "
-            "appears.\n\n"
-            f"{context_block}"
-        )
+    summarize_prompt = (
+        "Summarize the following YouTube video transcript concisely, "
+        "highlighting the main points and key takeaways.\n\n"
+        f"{context_block}"
+    )
 
-    if not api_key:
-        st.warning("API key in the sidebar required for AI Analysis")
-        return
+    keypoints_prompt = (
+        "Extract the key points from the following YouTube video transcript. "
+        "Return a numbered list. For each key point, include the timestamp "
+        "(HH:MM:SS) where the idea is discussed in the video.\n\n"
+        f"{context_block}"
+    )
 
-    if st.button("🔍 Analyze", use_container_width=True):
-        with st.spinner("Analyzing transcript..."):
+    tab_sum, tab_keypoints = st.tabs([":material/lightbulb:", ":material/key:"])
+    for label, analysis_type, prompt, tab in [
+        ("Summary", "Summarize", summarize_prompt, tab_sum),
+        ("Key Points", "Extract Key Points", keypoints_prompt, tab_keypoints),
+    ]:
+        with tab:
             try:
-                result = _cached_analysis(
-                    video_id=video_id,
-                    analysis_type=analysis_type,
-                    _system_prompt=system_prompt,
-                    _user_prompt=user_prompt,
-                    model=model,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                    api_key=api_key,
-                    api_base=api_base,
-                )
-                st.subheader("Analysis Result")
+                with st.spinner(f"Generating {label.lower()}..."):
+                    result = _cached_analysis(
+                        video_id=video_id,
+                        analysis_type=analysis_type,
+                        _system_prompt=system_prompt,
+                        _user_prompt=prompt,
+                        model=model,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                        api_key=api_key,
+                        api_base=api_base,
+                    )
+                st.caption(label)
                 st.caption(f"response from {result['model']}")
                 st.write(result["content"])
             except Exception as e:
-                st.error(f"Error during analysis: {str(e)}")
+                st.error(f"Error during {label.lower()}: {str(e)}")
 
 
 def youtube_transcript(

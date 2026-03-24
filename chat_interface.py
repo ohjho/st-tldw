@@ -77,6 +77,7 @@ def chat_with_rag(
 
     # Retrieval method selector
     with st_settings_container:
+        st.caption("RAG Chat settings:")
         method_options = ["Semantic (BGE)", "BM25 (Keyword)"]
         default_index = (
             1 if default_method and default_method.lower() == "semantic" else 0
