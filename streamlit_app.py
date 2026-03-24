@@ -3,6 +3,7 @@ import os
 import litellm
 import streamlit as st
 from dotenv import load_dotenv
+from streamlit_float import float_init
 
 from chat_interface import chat_with_rag
 from utils import (
@@ -335,6 +336,7 @@ def main():
         initial_sidebar_state="collapsed",
     )
     st.logo("asset/logo_large.png", size="large", icon_image="asset/logo_icon.png")
+    float_init()
     # st.title("🎬 ST-TLDW: Streamlit YouTube Transcript & LLM Chat")
 
     # Read URL query params for session sharing
