@@ -347,6 +347,10 @@ def main():
     st.logo("asset/logo_large.png", size="large", icon_image="asset/logo_icon.png")
     # hide_streamlit_chrome()
     float_init()
+    st.markdown(
+        "<style>.block-container { padding-top: 1rem; }</style>",
+        unsafe_allow_html=True,
+    )
     # st.title("🎬 ST-TLDW: Streamlit YouTube Transcript & LLM Chat")
 
     # Read URL query params for session sharing
@@ -427,7 +431,7 @@ def main():
         st.session_state.compact_mode_value = b_compact
 
         tab_readme, tab_settings, tab_metrics = st.tabs(
-            [":material/article:", ":material/settings:", ":material/electric_meter:"]
+            [":material/article:", ":material/settings:", ":material/info:"]
         )
         with tab_readme:
             st.write(f"""
