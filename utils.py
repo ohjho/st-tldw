@@ -455,3 +455,18 @@ def copy_to_clipboard_button(text: str, label: str = "🔗 Copy share link") -> 
         """,
         unsafe_allow_javascript=True,
     )
+
+
+def hide_streamlit_chrome():
+    """Hide default Streamlit UI chrome (footer badge, hamburger menu).
+
+    Injects a ``<style>`` block that hides the Streamlit footer and main menu.
+    Call once at the top of the app, after ``st.set_page_config()``.
+
+    >>> hide_streamlit_chrome  # doctest: +ELLIPSIS
+    <function hide_streamlit_chrome at ...>
+    """
+    st.markdown(
+        "<style>#MainMenu {visibility: hidden;} footer {visibility: hidden;}</style>",
+        unsafe_allow_html=True,
+    )

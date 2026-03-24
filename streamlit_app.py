@@ -12,6 +12,7 @@ from utils import (
     get_serpapi_searches_left,
     get_video_metadata_youtube_api,
     get_youtube_transcript_serpapi,
+    hide_streamlit_chrome,
     render_markdown_with_timestamps,
     serp_transcript_to_srt,
 )
@@ -343,6 +344,7 @@ def main():
         initial_sidebar_state="collapsed",
     )
     st.logo("asset/logo_large.png", size="large", icon_image="asset/logo_icon.png")
+    hide_streamlit_chrome()
     float_init()
     # st.title("🎬 ST-TLDW: Streamlit YouTube Transcript & LLM Chat")
 
