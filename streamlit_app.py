@@ -418,7 +418,7 @@ def main():
 
                 Obviously it **works best on podcast type videos**.
 
-                Read [this blog post]() on how this app was built.
+                Read [this blog post](https://seekingvega.github.io/sv-journal/notebooks/writeup_tldw.html) on how this app was built.
                 """)
             st.image("asset/qr.svg", caption="Scan for this App's URL")
         with tab_settings:
