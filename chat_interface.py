@@ -145,7 +145,7 @@ def chat_with_rag(
     chat_input_container = st.container()
     with chat_input_container:
         prompt = st.chat_input("Ask any thing about this video")
-    chat_input_container.float(float_css_helper(bottom="0"))
+    chat_input_container.float(float_css_helper(bottom="1rem"))
 
     if prompt:
         # Display user message

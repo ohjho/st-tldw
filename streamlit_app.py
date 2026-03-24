@@ -138,43 +138,31 @@ def analyze_transcript(
         "can jump to that moment in the video."
     )
 
-    summarize_prompt = (
-        "Summarize the following YouTube video transcript concisely, "
-        "highlighting the main points and key takeaways.\n\n"
+    analysis_prompt = (
+        "Analyze the following YouTube video transcript. "
+        "First, provide a concise summary highlighting the main points and key takeaways. "
+        "Then, list the key points as a numbered list with the timestamp "
+        "(HH:MM:SS) where each idea is discussed in the video.\n\n"
         f"{context_block}"
     )
 
-    keypoints_prompt = (
-        "Extract the key points from the following YouTube video transcript. "
-        "Return a numbered list. For each key point, include the timestamp "
-        "(HH:MM:SS) where the idea is discussed in the video.\n\n"
-        f"{context_block}"
-    )
-
-    tab_sum, tab_keypoints = st.tabs([":material/lightbulb:", ":material/key:"])
-    for label, analysis_type, prompt, tab in [
-        ("Summary", "Summarize", summarize_prompt, tab_sum),
-        ("Key Points", "Extract Key Points", keypoints_prompt, tab_keypoints),
-    ]:
-        with tab:
-            try:
-                with st.spinner(f"Generating {label.lower()}..."):
-                    result = _cached_analysis(
-                        video_id=video_id,
-                        analysis_type=analysis_type,
-                        _system_prompt=system_prompt,
-                        _user_prompt=prompt,
-                        model=model,
-                        temperature=temperature,
-                        max_tokens=max_tokens,
-                        api_key=api_key,
-                        api_base=api_base,
-                    )
-                st.caption(label)
-                st.caption(f"response from {result['model']}")
-                st.write(result["content"])
-            except Exception as e:
-                st.error(f"Error during {label.lower()}: {str(e)}")
+    try:
+        with st.spinner("Generating analysis..."):
+            result = _cached_analysis(
+                video_id=video_id,
+                analysis_type="Summarize and Extract Key Points",
+                _system_prompt=system_prompt,
+                _user_prompt=analysis_prompt,
+                model=model,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                api_key=api_key,
+                api_base=api_base,
+            )
+        st.caption(f"response from {result['model']}")
+        st.write(result["content"])
+    except Exception as e:
+        st.error(f"Error during analysis: {str(e)}")
 
 
 def youtube_transcript(
@@ -423,9 +411,9 @@ def main():
                 ollama_model = st.selectbox(
                     "Select Model",
                     options=[
+                        "gemini-3-flash-preview",
                         "qwen3.5",
                         "deepseek-v3.2",
-                        "gemini-3-flash-preview",
                     ],
                     accept_new_options=True,
                     help="Select an [Ollama Cloud model](https://ollama.com/search?c=cloud) or type a custom name",
@@ -455,8 +443,8 @@ def main():
             max_tokens = st.slider(
                 "Max Tokens",
                 min_value=100,
-                max_value=4096,
-                value=2048,
+                max_value=10000,
+                value=4096,
                 step=100,
             )
 
