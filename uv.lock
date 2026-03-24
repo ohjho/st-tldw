@@ -3335,6 +3335,7 @@ dependencies = [
     { name = "sentence-transformers" },
     { name = "streamlit" },
     { name = "streamlit-float" },
+    { name = "streamlit-js-eval" },
     { name = "youtube-transcript-api" },
 ]
 
@@ -3354,6 +3355,7 @@ requires-dist = [
     { name = "sentence-transformers", specifier = ">=3.0" },
     { name = "streamlit", specifier = ">=1.54.0" },
     { name = "streamlit-float", specifier = ">=0.3" },
+    { name = "streamlit-js-eval", specifier = ">=0.1.7" },
     { name = "youtube-transcript-api", specifier = ">=1.2.4" },
 ]
 
@@ -3400,6 +3402,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/90/9c/2b01908b1821320901a0e30758b7eb9661a87983fecce11f5e39e03f120c/streamlit_float-0.4.0.tar.gz", hash = "sha256:ef1114d3b3b6356ae9175aaa89626bcf62bee476ec40a6e94e3a209accbdb82c", size = 16720, upload-time = "2025-11-14T05:48:34.188Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d9/e0/b951225656f9e22a435faa7b16ab193e1114684e45b68dbb36bd84c8e1b1/streamlit_float-0.4.0-py3-none-any.whl", hash = "sha256:3818cefe0127dd4517f39f7e9cc84acdb387e8477db3656f8e1ab8c68aa34d20", size = 16064, upload-time = "2025-11-14T05:48:33.051Z" },
+]
+
+[[package]]
+name = "streamlit-js-eval"
+version = "1.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "streamlit" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/10/43/1403cdd4cafd4df8509e60d04b67bbd2e5fa454c03528d53e337c8022b1f/streamlit_js_eval-1.0.0.tar.gz", hash = "sha256:9e2b2005e3e8a4971d222488a02c880b7b93c8951393ff7f97419ded914498e4", size = 11454, upload-time = "2026-01-09T15:20:18.943Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7c/40/ae13b0290e89056ea16fbce331a94fa8bfb50cfeb7c1947e61e842636f94/streamlit_js_eval-1.0.0-py3-none-any.whl", hash = "sha256:4876f56dadb6a578615661b43bbec772c93dd4cd12efb2a2310534da06c34dbb", size = 11369, upload-time = "2026-01-09T15:20:17.698Z" },
 ]
 
 [[package]]

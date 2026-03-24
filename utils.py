@@ -476,3 +476,31 @@ def hide_streamlit_chrome():
         "<style>#MainMenu {visibility: hidden;} footer {visibility: hidden;}</style>",
         unsafe_allow_html=True,
     )
+
+
+def detect_mobile_device(width_threshold: int = 600) -> bool | None:
+    """Detect if the user's browser viewport is narrower than a threshold.
+
+    Uses ``streamlit-js-eval`` to query ``window.innerWidth`` from the browser.
+
+    Args:
+        width_threshold: Pixel width at or below which the device is
+            considered mobile. Defaults to 600.
+
+    Returns:
+        True if mobile, False if desktop, None if detection pending.
+
+    Examples:
+        >>> # When JS returns a phone-width viewport:
+        >>> # detect_mobile_device()  -> True
+        >>> # When JS hasn't responded yet:
+        >>> # detect_mobile_device()  -> None
+    """
+    from streamlit_js_eval import streamlit_js_eval
+
+    width = streamlit_js_eval(
+        js_expressions="window.innerWidth", key="device_width_detect"
+    )
+    if width is None or width == 0:
+        return None
+    return width <= width_threshold

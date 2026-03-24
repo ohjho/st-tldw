@@ -8,6 +8,7 @@ from streamlit_float import float_init
 from chat_interface import chat_with_rag
 from utils import (
     copy_to_clipboard_button,
+    detect_mobile_device,
     extract_video_id,
     get_serpapi_searches_left,
     get_video_metadata_youtube_api,
@@ -368,6 +369,19 @@ def main():
     if "api_key_set" not in st.session_state:
         st.session_state.api_key_set = False
 
+    # Auto-detect mobile for compact mode default
+    if "compact_mode_user_set" not in st.session_state:
+        st.session_state.compact_mode_user_set = False
+    if not st.session_state.compact_mode_user_set:
+        is_mobile = detect_mobile_device()
+        if is_mobile is not None:
+            st.session_state.compact_mode_value = is_mobile
+            if is_mobile and "device_detected" not in st.session_state:
+                st.session_state.device_detected = True
+                st.rerun()
+        else:
+            st.session_state.setdefault("compact_mode_value", False)
+
     # Auto-load transcript from URL param ?v=VIDEO_ID
     if url_video_id and SERPAPI_KEY:
         if st.session_state.get("youtube_video_id") != url_video_id:
@@ -402,7 +416,15 @@ def main():
             st.query_params.clear()
             st.rerun()
 
-        b_compact = cols[1].toggle("compact mode", help="best for mobile experience")
+        compact_default = st.session_state.get("compact_mode_value", False)
+        b_compact = cols[1].toggle(
+            "compact mode",
+            value=compact_default,
+            help="best for mobile experience",
+        )
+        if b_compact != compact_default:
+            st.session_state.compact_mode_user_set = True
+        st.session_state.compact_mode_value = b_compact
 
         tab_readme, tab_settings, tab_metrics = st.tabs(
             [":material/article:", ":material/settings:", ":material/electric_meter:"]

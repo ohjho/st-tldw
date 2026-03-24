@@ -37,6 +37,7 @@ uv sync
 - **`copy_to_clipboard_button()`** - Render an HTML button via `st.html` that copies arbitrary text to the clipboard using `navigator.clipboard`.
 - **`render_markdown_with_timestamps()`** - Render LLM markdown with clickable timestamp links. Regex-finds `H:MM:SS`/`HH:MM:SS` patterns and converts them to `<a>` links via `st.markdown(unsafe_allow_html=True)`. Supports `open_in_new_tab` (adds `target="_blank"`) and `use_youtube_url` (links to youtube.com instead of in-app relative URL). Reuses `srt_timestamp_to_seconds()` for conversion.
 - **`srt_timestamp_to_seconds()`** - Convert SRT timestamp (`HH:MM:SS,mmm`) to whole seconds for YouTube `&t=` URL parameters. Also handles `H:MM:SS` without milliseconds.
+- **`detect_mobile_device()`** - Uses `streamlit-js-eval` to query `window.innerWidth` from the browser. Returns `True` (mobile, ≤600px), `False` (desktop), or `None` (JS not yet responded). Used to auto-default compact mode on mobile devices.
 
 ### `chat_interface.py` — RAG chat module
 
@@ -52,8 +53,9 @@ uv sync
 - **Environment**: API keys loaded from `secrets.env` (gitignored). Required: `SERPAPI_KEY`, `OPENROUTER_API_KEY`. Optional: `YOUTUBE_API_KEY` (for YouTube Data API v3 metadata).
 - **LLM routing**: Uses litellm with OpenRouter free-tier models by default (e.g., `openrouter/google/gemma-3-4b-it:free`). RAG chat uses langchain's `ChatLiteLLM` wrapper.
 - **RAG dependencies**: langchain, langchain-community, faiss-cpu, rank-bm25, sentence-transformers, langchain-huggingface.
+- **Device detection**: `streamlit-js-eval` queries `window.innerWidth` to auto-enable compact mode on mobile (≤600px). Detection runs once on first load; user can override via the sidebar toggle.
 - **URL query params**: `?v=VIDEO_ID` auto-loads a transcript on page load; `?method=semantic` pre-selects the RAG retrieval method; `?t=SECONDS` seeks the video to a specific timestamp (used by clickable timestamp links).
-- **Session state keys**: `youtube_url`, `youtube_video_id`, `youtube_transcript`, `serp_transcript`, `video_metadata`, `video_start_time`, `messages`, `api_key_set`, `rag_messages`, `rag_retriever`, `rag_indexed_srt`, `rag_retrieval_method`.
+- **Session state keys**: `youtube_url`, `youtube_video_id`, `youtube_transcript`, `serp_transcript`, `video_metadata`, `video_start_time`, `messages`, `api_key_set`, `rag_messages`, `rag_retriever`, `rag_indexed_srt`, `rag_retrieval_method`, `compact_mode_user_set`, `compact_mode_value`, `device_detected`.
 
 ## Guidelines
 

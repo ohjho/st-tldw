@@ -1,5 +1,7 @@
 """Unit tests for utils.py — pure function tests (no network calls)."""
 
+from unittest.mock import patch
+
 import pytest
 
 from utils import extract_video_id, ms_to_srt_timestamp, serp_transcript_to_srt, srt_timestamp_to_seconds
@@ -136,3 +138,56 @@ class TestSerpTranscriptToSrt:
         assert "Line1 Line2" in result
         # Only structural newlines should remain
         assert "Line1\nLine2" not in result
+
+
+class TestDetectMobileDevice:
+    """Tests for detect_mobile_device()."""
+
+    @patch("streamlit_js_eval.streamlit_js_eval")
+    def test_phone_width(self, mock_js_eval):
+        """Phone-width viewport (375px) returns True."""
+        mock_js_eval.return_value = 375
+        from utils import detect_mobile_device
+
+        assert detect_mobile_device() is True
+
+    @patch("streamlit_js_eval.streamlit_js_eval")
+    def test_desktop_width(self, mock_js_eval):
+        """Desktop-width viewport (1024px) returns False."""
+        mock_js_eval.return_value = 1024
+        from utils import detect_mobile_device
+
+        assert detect_mobile_device() is False
+
+    @patch("streamlit_js_eval.streamlit_js_eval")
+    def test_none_pending(self, mock_js_eval):
+        """JS bridge not yet responded returns None."""
+        mock_js_eval.return_value = None
+        from utils import detect_mobile_device
+
+        assert detect_mobile_device() is None
+
+    @patch("streamlit_js_eval.streamlit_js_eval")
+    def test_zero_quirk(self, mock_js_eval):
+        """JS returning 0 (known quirk) returns None."""
+        mock_js_eval.return_value = 0
+        from utils import detect_mobile_device
+
+        assert detect_mobile_device() is None
+
+    @patch("streamlit_js_eval.streamlit_js_eval")
+    def test_boundary(self, mock_js_eval):
+        """Exactly at threshold (600px) returns True."""
+        mock_js_eval.return_value = 600
+        from utils import detect_mobile_device
+
+        assert detect_mobile_device() is True
+
+    @patch("streamlit_js_eval.streamlit_js_eval")
+    def test_custom_threshold(self, mock_js_eval):
+        """Custom threshold is respected."""
+        mock_js_eval.return_value = 500
+        from utils import detect_mobile_device
+
+        assert detect_mobile_device(width_threshold=480) is False
+        assert detect_mobile_device(width_threshold=500) is True
