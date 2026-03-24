@@ -1,4 +1,5 @@
 import streamlit as st
+from streamlit_float import float_css_helper
 from langchain_community.chat_models import ChatLiteLLM
 from langchain_community.retrievers import BM25Retriever
 from langchain_community.vectorstores import FAISS
@@ -140,8 +141,13 @@ def chat_with_rag(
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
-    # Chat input
-    if prompt := st.chat_input("Ask any thing about this video"):
+    # Chat input — pinned to bottom via streamlit-float
+    chat_input_container = st.container()
+    with chat_input_container:
+        prompt = st.chat_input("Ask any thing about this video")
+    chat_input_container.float(float_css_helper(bottom="0"))
+
+    if prompt:
         # Display user message
         st.session_state.rag_messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):

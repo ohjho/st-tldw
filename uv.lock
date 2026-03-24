@@ -3334,6 +3334,7 @@ dependencies = [
     { name = "rank-bm25" },
     { name = "sentence-transformers" },
     { name = "streamlit" },
+    { name = "streamlit-float" },
     { name = "youtube-transcript-api" },
 ]
 
@@ -3352,6 +3353,7 @@ requires-dist = [
     { name = "rank-bm25", specifier = ">=0.2" },
     { name = "sentence-transformers", specifier = ">=3.0" },
     { name = "streamlit", specifier = ">=1.54.0" },
+    { name = "streamlit-float", specifier = ">=0.3" },
     { name = "youtube-transcript-api", specifier = ">=1.2.4" },
 ]
 
@@ -3386,6 +3388,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/be/66/d887ee80ea85f035baee607c60af024994e17ae9b921277fca9675e76ecf/streamlit-1.54.0.tar.gz", hash = "sha256:09965e6ae7eb0357091725de1ce2a3f7e4be155c2464c505c40a3da77ab69dd8", size = 8662292, upload-time = "2026-02-04T16:37:54.734Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/48/1d/40de1819374b4f0507411a60f4d2de0d620a9b10c817de5925799132b6c9/streamlit-1.54.0-py3-none-any.whl", hash = "sha256:a7b67d6293a9f5f6b4d4c7acdbc4980d7d9f049e78e404125022ecb1712f79fc", size = 9119730, upload-time = "2026-02-04T16:37:52.199Z" },
+]
+
+[[package]]
+name = "streamlit-float"
+version = "0.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "streamlit" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/90/9c/2b01908b1821320901a0e30758b7eb9661a87983fecce11f5e39e03f120c/streamlit_float-0.4.0.tar.gz", hash = "sha256:ef1114d3b3b6356ae9175aaa89626bcf62bee476ec40a6e94e3a209accbdb82c", size = 16720, upload-time = "2025-11-14T05:48:34.188Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d9/e0/b951225656f9e22a435faa7b16ab193e1114684e45b68dbb36bd84c8e1b1/streamlit_float-0.4.0-py3-none-any.whl", hash = "sha256:3818cefe0127dd4517f39f7e9cc84acdb387e8477db3656f8e1ab8c68aa34d20", size = 16064, upload-time = "2025-11-14T05:48:33.051Z" },
 ]
 
 [[package]]
