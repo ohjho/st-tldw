@@ -118,9 +118,7 @@ def get_youtube_transcript_serpapi(video_id: str, serpapi_key: str) -> dict:
         data = response.json()
 
         if "transcript" in data:
-            transcript_text = " ".join(
-                [item["snippet"] for item in data["transcript"]]
-            )
+            transcript_text = " ".join([item["snippet"] for item in data["transcript"]])
             return {
                 "success": True,
                 "transcript": transcript_text,
@@ -245,10 +243,9 @@ def get_video_metadata_youtube_api(video_id: str, api_key: str) -> dict:
         statistics = items[0].get("statistics", {})
         content_details = items[0].get("contentDetails", {})
         thumbnails = snippet.get("thumbnails", {})
-        thumb_url = (
-            thumbnails.get("maxres", thumbnails.get("high", thumbnails.get("default", {})))
-            .get("url", "")
-        )
+        thumb_url = thumbnails.get(
+            "maxres", thumbnails.get("high", thumbnails.get("default", {}))
+        ).get("url", "")
 
         return {
             "success": True,
@@ -409,7 +406,9 @@ def render_markdown_with_timestamps(
             href = f"https://www.youtube.com/watch?v={video_id}&t={seconds}"
         else:
             href = f"?v={video_id}&t={seconds}"
-        target_attr = ' target="_blank" rel="noopener noreferrer"' if open_in_new_tab else ""
+        target_attr = (
+            ' target="_blank" rel="noopener noreferrer"' if open_in_new_tab else ""
+        )
         return (
             f'<a href="{href}"{target_attr} '
             f'style="color:#1a73e8;text-decoration:underline;cursor:pointer" '
@@ -466,6 +465,13 @@ def hide_streamlit_chrome():
     >>> hide_streamlit_chrome  # doctest: +ELLIPSIS
     <function hide_streamlit_chrome at ...>
     """
+    from streamlit.components.v1 import html
+
+    # html("""
+    #        <script>
+    #         window.top.document.querySelectorAll(`[href*="streamlit.io"]`).forEach(e => e.setAttribute("style", "display: none;"));
+    #       </script>
+    #     """)
     st.markdown(
         "<style>#MainMenu {visibility: hidden;} footer {visibility: hidden;}</style>",
         unsafe_allow_html=True,

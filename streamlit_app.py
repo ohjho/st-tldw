@@ -344,7 +344,7 @@ def main():
         initial_sidebar_state="collapsed",
     )
     st.logo("asset/logo_large.png", size="large", icon_image="asset/logo_icon.png")
-    hide_streamlit_chrome()
+    # hide_streamlit_chrome()
     float_init()
     # st.title("🎬 ST-TLDW: Streamlit YouTube Transcript & LLM Chat")
 
