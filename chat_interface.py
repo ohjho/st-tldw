@@ -1,5 +1,4 @@
 import streamlit as st
-from streamlit_float import float_css_helper
 from langchain_community.chat_models import ChatLiteLLM
 from langchain_community.retrievers import BM25Retriever
 from langchain_community.vectorstores import FAISS
@@ -7,6 +6,7 @@ from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from streamlit_float import float_css_helper
 
 
 def _split_srt(srt_string: str) -> list[Document]:
@@ -127,9 +127,10 @@ def chat_with_rag(
             st.session_state.rag_messages = []
 
     # Clear chat button
-    if cols[1].button(
+    clear_btn_container = cols[0] if st.session_state.compact_mode_value else cols[1]
+    if clear_btn_container.button(
         ":material/replay:",
-        width="stretch",
+        # width="stretch",
         help="clear chat context",
         type="tertiary",
     ):
