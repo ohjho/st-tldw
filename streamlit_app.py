@@ -118,7 +118,7 @@ def analyze_transcript(
     col_label, col_btn = st.columns([90, 10])
     col_label.caption("AI Summary:")
     if col_btn.button(
-        ":material/refresh:",
+        ":material/replay:",
         help="Clear cache and re-generate summary",
         type="tertiary",
     ):
@@ -389,7 +389,8 @@ def main():
 
     # Sidebar for analysis configuration
     with st.sidebar:
-        if st.button(
+        cols = st.columns((1, 2))
+        if cols[0].button(
             ":material/delete:",
             width="content",
             type="tertiary",
@@ -399,9 +400,27 @@ def main():
             st.query_params.clear()
             st.rerun()
 
+        b_compact = cols[1].toggle("compact mode", help="best for mobile experience")
+
         tab_readme, tab_settings, tab_metrics = st.tabs(
             [":material/article:", ":material/settings:", ":material/electric_meter:"]
         )
+        with tab_readme:
+            st.write(f"""
+                Have you ever came across a video that's **too long** that you **didn't watch** (**TLDW**)
+                on Youtube?
+
+                if so then this streamlit app is for you!
+
+                This app analyze a Youtube Video's transcript to provide:
+                * AI Summary
+                * RAG Chat interface
+
+                Obviously it **works best on podcast type videos**.
+
+                Read [this blog post]() on how this app was built.
+                """)
+            st.image("asset/qr.svg", caption="Scan for this App's URL")
         with tab_settings:
             st.caption(f"LLM settings:")
             # Provider selection
@@ -475,7 +494,9 @@ def main():
 
     # Navigation tabs
     # tab1, tab2 = st.tabs(["📺 YouTube Transcript", "💬 Chat"])
-    lcol, rcol = st.columns((6, 4))
+    lcol, rcol = (
+        st.tabs([":material/wand_stars:", "Chat"]) if b_compact else st.columns((6, 4))
+    )
 
     with lcol:
         youtube_transcript(
