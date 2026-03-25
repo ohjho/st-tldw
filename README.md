@@ -12,3 +12,7 @@ The excellent [NotebookLM](https://notebooklm.google.com) can already do this be
 1. to learn Agentic Coding
 2. to learn FastHTML: prototyped in Streamlit and asked Claude to teach me how to recreate this in [FastHTML](https://fastht.ml/docs/#getting-help-from-ai)
 3. the created codebase could still be useful in cases where NotebookLM can't be used
+
+## Agentic Engineering
+
+This project is agentically engineered using [Claude Code](https://claude.ai/code). See [CLAUDE.md](CLAUDE.md) for the project conventions and architecture reference that guide the AI agent.

@@ -14,6 +14,9 @@ uv run streamlit run streamlit_app.py
 
 # Install dependencies
 uv sync
+
+# Run tests
+uv run pytest
 ```
 
 ## Architecture
@@ -57,9 +60,17 @@ uv sync
 - **URL query params**: `?v=VIDEO_ID` auto-loads a transcript on page load; `?method=semantic` pre-selects the RAG retrieval method; `?t=SECONDS` seeks the video to a specific timestamp (used by clickable timestamp links).
 - **Session state keys**: `youtube_url`, `youtube_video_id`, `youtube_transcript`, `serp_transcript`, `video_metadata`, `video_start_time`, `messages`, `api_key_set`, `rag_messages`, `rag_retriever`, `rag_indexed_srt`, `rag_retrieval_method`, `compact_mode_user_set`, `compact_mode_value`, `device_detected`.
 
+## Tests
+
+Tests live in the `tests/` directory. Pytest is configured in `pyproject.toml` with `pythonpath = ["."]` so test files can import root-level modules directly (e.g., `from utils import ...`).
+
+- `tests/test_utils.py` — unit tests for pure utility functions (no network)
+- `tests/test_oembed.py` — integration tests for oEmbed metadata fetcher (hits network)
+- `tests/test_youtube_api.py` — integration tests for YouTube Data API (requires `YOUTUBE_API_KEY`)
+
 ## Guidelines
 
-- Create tests and update CLAUDE.md for each new feature
+- Create tests in `tests/` and update CLAUDE.md for each new feature
 - use Google-style docstring for new functions and add a doctest compatible unit test if possible
 - keep code modular to ensure ease in future refactoring
 - Prefer native Streamlit features over custom CSS

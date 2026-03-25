@@ -18,6 +18,10 @@ dependencies = [
     "streamlit-js-eval>=0.1.7",
 ]
 
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
 [dependency-groups]
 dev = [
     "pytest>=9.0.2",
