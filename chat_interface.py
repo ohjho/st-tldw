@@ -8,6 +8,8 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from streamlit_float import float_css_helper
 
+from utils import get_llm_icon, render_markdown_with_timestamps
+
 
 def _split_srt(srt_string: str) -> list[Document]:
     """Split SRT string into document chunks, respecting subtitle block boundaries."""
@@ -139,8 +141,23 @@ def chat_with_rag(
 
     # Render chat history
     for msg in st.session_state.rag_messages:
-        with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
+        with st.chat_message(
+            msg["role"],
+            avatar=(
+                get_llm_icon(model.split("/")[-1], theme="light")
+                if msg["role"] == "assistant"
+                else None
+            ),
+        ):
+            if msg["role"] == "assistant":
+                render_markdown_with_timestamps(
+                    msg["content"],
+                    video_id=st.session_state.youtube_video_id,
+                    open_in_new_tab=True,
+                    use_youtube_url=True,
+                )
+            else:
+                st.markdown(msg["content"])
 
     # Chat input — pinned to bottom via streamlit-float
     chat_input_container = st.container()
@@ -163,6 +180,7 @@ def chat_with_rag(
         system_content = (
             "You are a helpful assistant answering questions about a YouTube video transcript. "
             "Use the following transcript excerpts to answer the user's question. "
+            "If referring to a timestamp, please use the HH:MM:SS,mmm format. "
             "If the answer is not in the provided context, say so.\n\n"
             f"Context:\n{context}"
         )
@@ -188,11 +206,24 @@ def chat_with_rag(
             llm_kwargs["api_base"] = api_base
         llm = ChatLiteLLM(**llm_kwargs)
 
-        with st.chat_message("assistant"):
+        with st.chat_message(
+            "assistant", avatar=get_llm_icon(model.split("/")[-1], theme="light")
+        ):
             try:
-                with st.spinner("thinking..."):
-                    stream = llm.stream(messages)
-                    response_content = st.write_stream(_stream_text(stream))
+                placeholder = st.empty()
+                with placeholder.container():
+                    with st.spinner("thinking..."):
+                        stream = llm.stream(messages)
+                        response_content = st.write_stream(_stream_text(stream))
+                # Re-render with clickable timestamps
+                placeholder.empty()
+                with placeholder.container():
+                    render_markdown_with_timestamps(
+                        response_content,
+                        video_id=st.session_state.youtube_video_id,
+                        open_in_new_tab=True,
+                        use_youtube_url=True,
+                    )
             except Exception as e:
                 st.error(f"Error: {e}")
                 st.session_state.rag_messages.pop()
