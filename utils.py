@@ -3,6 +3,7 @@
 import re
 from typing import Dict, List, Optional
 
+import httpx
 import requests
 import streamlit as st
 from youtube_transcript_api import YouTubeTranscriptApi
@@ -504,3 +505,24 @@ def detect_mobile_device(width_threshold: int = 600) -> bool | None:
     if width is None or width == 0:
         return None
     return width <= width_threshold
+
+
+def is_valid_url(url_string):
+    try:
+        url = httpx.URL(url_string)
+        return url.scheme and url.host
+    except Exception:
+        return False
+
+
+@st.cache_data
+def get_llm_icon(model_name: str, theme: str = "dark"):
+    """return an LLM Icon thanks to lobe-icons
+    ref: https://github.com/lobehub/lobe-icons#-cdn-usage
+    """
+    icon_slug = model_name.split("/")[0]
+    icon_slug = icon_slug.split("-")[0] if "-" in icon_slug else icon_slug
+    icon_url = (
+        f"https://unpkg.com/@lobehub/icons-static-png@latest/{theme}/{icon_slug}.png"
+    )
+    return icon_url if is_valid_url(icon_url) else None
