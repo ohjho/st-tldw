@@ -241,6 +241,7 @@ def youtube_transcript(
                     st.error(
                         f"❌ Failed to fetch transcript for video id `{video_id}`: {result['error']}"
                     )
+                    st.query_params.clear()
                     st.stop()
 
     # Display transcript if available
