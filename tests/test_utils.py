@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import pytest
 
-from utils import extract_video_id, ms_to_srt_timestamp, serp_transcript_to_srt, srt_timestamp_to_seconds
+from utils import extract_video_id, ms_to_srt_timestamp, raw_transcript_to_srt, srt_timestamp_to_seconds
 
 
 class TestExtractVideoId:
@@ -87,31 +87,31 @@ class TestSrtTimestampToSeconds:
         assert srt_timestamp_to_seconds("") == 0
 
 
-class TestSerpTranscriptToSrt:
-    """Tests for serp_transcript_to_srt()."""
+class TestRawTranscriptToSrt:
+    """Tests for raw_transcript_to_srt()."""
 
     def test_basic_conversion(self):
         transcript = [
             {"start_ms": 0, "end_ms": 1000, "snippet": "Hello"},
             {"start_ms": 1000, "end_ms": 2000, "snippet": "World"},
         ]
-        result = serp_transcript_to_srt(transcript)
+        result = raw_transcript_to_srt(transcript)
         assert "1\n00:00:00,000 --> 00:00:01,000\nHello\n" in result
         assert "2\n00:00:01,000 --> 00:00:02,000\nWorld\n" in result
 
     def test_empty_list(self):
-        assert serp_transcript_to_srt([]) == ""
+        assert raw_transcript_to_srt([]) == ""
 
     def test_none_input(self):
-        assert serp_transcript_to_srt(None) == ""
+        assert raw_transcript_to_srt(None) == ""
 
     def test_non_list_input(self):
-        assert serp_transcript_to_srt("not a list") == ""
+        assert raw_transcript_to_srt("not a list") == ""
 
     def test_missing_fields(self):
         """Items with missing keys use fallback values."""
         transcript = [{"snippet": "Only text"}]
-        result = serp_transcript_to_srt(transcript)
+        result = raw_transcript_to_srt(transcript)
         assert "1\n00:00:00,000 --> 00:00:00,000\nOnly text\n" in result
 
     def test_skips_empty_text(self):
@@ -120,21 +120,21 @@ class TestSerpTranscriptToSrt:
             {"start_ms": 0, "end_ms": 1000, "snippet": ""},
             {"start_ms": 1000, "end_ms": 2000, "snippet": "Kept"},
         ]
-        result = serp_transcript_to_srt(transcript)
+        result = raw_transcript_to_srt(transcript)
         assert result.startswith("1\n")
         assert "Kept" in result
 
     def test_alternative_keys(self):
         """Supports 'start'/'end'/'text' as alternative keys."""
         transcript = [{"start": 500, "end": 1500, "text": "Alt keys"}]
-        result = serp_transcript_to_srt(transcript)
+        result = raw_transcript_to_srt(transcript)
         assert "00:00:00,500 --> 00:00:01,500" in result
         assert "Alt keys" in result
 
     def test_newlines_in_text_replaced(self):
         """Newlines within snippet text are replaced with spaces."""
         transcript = [{"start_ms": 0, "end_ms": 1000, "snippet": "Line1\nLine2"}]
-        result = serp_transcript_to_srt(transcript)
+        result = raw_transcript_to_srt(transcript)
         assert "Line1 Line2" in result
         # Only structural newlines should remain
         assert "Line1\nLine2" not in result

@@ -11,11 +11,13 @@ from utils import (
     detect_mobile_device,
     extract_video_id,
     get_serpapi_searches_left,
+    get_supadata_credits_left,
     get_video_metadata_youtube_api,
     get_youtube_transcript_serpapi,
+    get_youtube_transcript_supadata,
     hide_streamlit_chrome,
+    raw_transcript_to_srt,
     render_markdown_with_timestamps,
-    serp_transcript_to_srt,
 )
 
 if os.path.isfile("./secrets.env"):
@@ -25,6 +27,7 @@ SERPAPI_KEY = os.getenv("SERPAPI_KEY", None)
 DEFAULT_OR_API_KEY = os.environ.get("OPENROUTER_API_KEY", None)
 DEFAULT_OLLAMA_API_KEY = os.environ.get("OLLAMA_API_KEY", None)
 YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY", None)
+SUPADATA_API_KEY = os.environ.get("SUPADATA_API_KEY", None)
 
 
 @st.cache_data(show_spinner=False)
@@ -101,9 +104,9 @@ def analyze_transcript(
         api_base: Optional provider base URL.
     """
     srt_string = ""
-    serp = st.session_state.get("serp_transcript")
-    if serp:
-        srt_string = serp_transcript_to_srt(serp)
+    raw = st.session_state.get("raw_transcript")
+    if raw:
+        srt_string = raw_transcript_to_srt(raw)
 
     if not srt_string:
         return
@@ -184,16 +187,21 @@ def youtube_transcript(
     """Extract and display YouTube transcript with optional AI summarization."""
     # st.header("📺 YouTube Transcript Extractor")
 
-    assert SERPAPI_KEY, f"SERPAPI_KEY not found in ENV"
+    if not SERPAPI_KEY and not SUPADATA_API_KEY:
+        st.error(
+            "No transcript API key found. Set `SERPAPI_KEY` or `SUPADATA_API_KEY`."
+        )
+        return
 
     # Initialize session state for youtube
     stored_values = [
         "youtube_url",
         "youtube_video_id",
         "youtube_transcript",
-        "serp_transcript",
+        "raw_transcript",
         "video_metadata",
         "video_start_time",
+        "transcript_source",
     ]
     for v in stored_values:
         if v not in st.session_state:
@@ -224,22 +232,39 @@ def youtube_transcript(
             else:
                 st.session_state.youtube_video_id = video_id
                 st.session_state.video_start_time = 0
-                # result = get_youtube_transcript(video_id)
-                result = get_youtube_transcript_serpapi(
-                    video_id, serpapi_key=SERPAPI_KEY
-                )
 
-                if result["success"]:
+                # Try SerpAPI first, fall back to Supadata
+                result = None
+                source = ""
+                if SERPAPI_KEY:
+                    result = get_youtube_transcript_serpapi(
+                        video_id, serpapi_key=SERPAPI_KEY
+                    )
+                    if result["success"]:
+                        source = "SerpAPI"
+
+                if (result is None or not result["success"]) and SUPADATA_API_KEY:
+                    result = get_youtube_transcript_supadata(
+                        video_id, supadata_key=SUPADATA_API_KEY
+                    )
+                    if result["success"]:
+                        source = "Supadata"
+
+                if result and result["success"]:
                     st.session_state.youtube_transcript = result["transcript"]
-                    st.session_state.serp_transcript = result["raw_transcript"]
+                    st.session_state.raw_transcript = result["raw_transcript"]
+                    st.session_state.transcript_source = source
                     st.session_state.video_metadata = get_video_metadata_youtube_api(
                         video_id, YOUTUBE_API_KEY
                     )
                     st.query_params["v"] = video_id
                     st.success("✅ Transcript extracted successfully!")
                 else:
+                    error_msg = (
+                        result["error"] if result else "No transcript API configured"
+                    )
                     st.error(
-                        f"❌ Failed to fetch transcript for video id `{video_id}`: {result['error']}"
+                        f"❌ Failed to fetch transcript for video id `{video_id}`: {error_msg}"
                     )
                     st.query_params.clear()
                     st.stop()
@@ -291,14 +316,14 @@ def youtube_transcript(
             # Show JSON/raw transcript returned by SerpApi
             with tab_json:
                 st.caption("Raw Transcript")
-                st.write(st.session_state.serp_transcript)
+                st.write(st.session_state.raw_transcript)
 
             # Convert to SRT string and provide download button in the SRT tab
-            serp = st.session_state.serp_transcript
+            raw = st.session_state.raw_transcript
             srt_string = ""
-            if serp:
+            if raw:
                 try:
-                    srt_string = serp_transcript_to_srt(serp)
+                    srt_string = raw_transcript_to_srt(raw)
                 except Exception as e:
                     srt_string = ""
                     tab_srt.error(f"Failed to convert transcript to SRT: {e}")
@@ -392,15 +417,29 @@ def main():
             st.session_state.setdefault("compact_mode_value", False)
 
     # Auto-load transcript from URL param ?v=VIDEO_ID
-    if url_video_id and SERPAPI_KEY:
+    if url_video_id and (SERPAPI_KEY or SUPADATA_API_KEY):
         if st.session_state.get("youtube_video_id") != url_video_id:
-            result = get_youtube_transcript_serpapi(
-                url_video_id, serpapi_key=SERPAPI_KEY
-            )
-            if result["success"]:
+            result = None
+            source = ""
+            if SERPAPI_KEY:
+                result = get_youtube_transcript_serpapi(
+                    url_video_id, serpapi_key=SERPAPI_KEY
+                )
+                if result["success"]:
+                    source = "SerpAPI"
+
+            if (result is None or not result["success"]) and SUPADATA_API_KEY:
+                result = get_youtube_transcript_supadata(
+                    url_video_id, supadata_key=SUPADATA_API_KEY
+                )
+                if result["success"]:
+                    source = "Supadata"
+
+            if result and result["success"]:
                 st.session_state.youtube_video_id = url_video_id
                 st.session_state.youtube_transcript = result["transcript"]
-                st.session_state.serp_transcript = result["raw_transcript"]
+                st.session_state.raw_transcript = result["raw_transcript"]
+                st.session_state.transcript_source = source
                 st.session_state.video_metadata = get_video_metadata_youtube_api(
                     url_video_id, YOUTUBE_API_KEY
                 )
@@ -408,8 +447,11 @@ def main():
                     f"https://www.youtube.com/watch?v={url_video_id}"
                 )
             else:
+                error_msg = (
+                    result["error"] if result else "No transcript API configured"
+                )
                 st.warning(
-                    f"Could not load transcript for video `{url_video_id}`: {result['error']}"
+                    f"Could not load transcript for video `{url_video_id}`: {error_msg}"
                 )
 
     # Sidebar for analysis configuration
@@ -518,12 +560,28 @@ def main():
             )
 
         with tab_metrics:
+            transcript_source = st.session_state.get("transcript_source", "")
+            if transcript_source:
+                st.caption(f"Transcript Source: {transcript_source}")
             if SERPAPI_KEY:
                 searches_left = get_serpapi_searches_left(SERPAPI_KEY)
                 if searches_left is not None:
                     st.metric("SerpAPI Searches Left", searches_left)
                 else:
                     st.warning("Could not fetch SerpAPI account info")
+            if SUPADATA_API_KEY:
+                supadata_info = get_supadata_credits_left(SUPADATA_API_KEY)
+                if supadata_info is not None:
+                    credits = (
+                        supadata_info["maxCredits"] - supadata_info["usedCredits"]
+                        if "maxCredits" in supadata_info.keys()
+                        and "usedCredits" in supadata_info.keys()
+                        else None
+                    )
+                    if credits is not None:
+                        st.metric("Supadata Credits Left", credits)
+                    else:
+                        st.caption(f"Supadata: problem fetching account info")
 
     # Navigation tabs
     # tab1, tab2 = st.tabs(["📺 YouTube Transcript", "💬 Chat"])
@@ -543,8 +601,8 @@ def main():
 
     with rcol:
         srt_for_rag = ""
-        if st.session_state.get("serp_transcript"):
-            srt_for_rag = serp_transcript_to_srt(st.session_state.serp_transcript)
+        if st.session_state.get("raw_transcript"):
+            srt_for_rag = raw_transcript_to_srt(st.session_state.raw_transcript)
         chat_with_rag(
             srt_string=srt_for_rag,
             model=model,

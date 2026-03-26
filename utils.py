@@ -96,7 +96,7 @@ def get_youtube_transcript(video_id: str) -> dict:
         }
 
 
-@st.cache_data(ttl="1d")
+@st.cache_data(ttl="14d")
 def get_youtube_transcript_serpapi(video_id: str, serpapi_key: str) -> dict:
     """Fetch transcript from YouTube video using SerpApi.
 
@@ -140,6 +140,81 @@ def get_youtube_transcript_serpapi(video_id: str, serpapi_key: str) -> dict:
             "raw_transcript": None,
             "error": str(e),
         }
+
+
+@st.cache_data(ttl="14d")
+def get_youtube_transcript_supadata(video_id: str, supadata_key: str) -> dict:
+    """Fetch transcript from YouTube video using Supadata API.
+
+    Args:
+        video_id: YouTube video ID.
+        supadata_key: Supadata API key.
+
+    Returns:
+        A dict with keys ``success``, ``transcript``, ``raw_transcript``, ``error``.
+    """
+    try:
+        url = "https://api.supadata.ai/v1/youtube/transcript"
+        params = {"videoId": video_id, "text": "false"}
+        headers = {"x-api-key": supadata_key}
+        response = requests.get(url, params=params, headers=headers, timeout=15)
+        response.raise_for_status()
+        data = response.json()
+
+        content = data.get("content")
+        if content and isinstance(content, list):
+            # Normalize to match SerpAPI format for raw_transcript_to_srt()
+            raw_transcript = [
+                {
+                    "snippet": item["text"],
+                    "start_ms": item["offset"],
+                    "end_ms": item["offset"] + item["duration"],
+                }
+                for item in content
+            ]
+            transcript_text = " ".join(item["text"] for item in content)
+            return {
+                "success": True,
+                "transcript": transcript_text,
+                "raw_transcript": raw_transcript,
+                "error": None,
+            }
+        else:
+            return {
+                "success": False,
+                "transcript": None,
+                "raw_transcript": None,
+                "error": "Transcript not found",
+            }
+    except Exception as e:
+        return {
+            "success": False,
+            "transcript": None,
+            "raw_transcript": None,
+            "error": str(e),
+        }
+
+
+@st.cache_data(ttl=300)
+def get_supadata_credits_left(api_key: str) -> Optional[dict]:
+    """Fetch account/credit info from Supadata.
+
+    Args:
+        api_key: Supadata API key.
+
+    Returns:
+        A dict with account info, or ``None`` on failure.
+    """
+    try:
+        resp = requests.get(
+            "https://api.supadata.ai/v1/me",
+            headers={"x-api-key": api_key},
+            timeout=10,
+        )
+        resp.raise_for_status()
+        return resp.json()
+    except Exception:
+        return None
 
 
 @st.cache_data(ttl="1d")
@@ -336,8 +411,8 @@ def srt_timestamp_to_seconds(timestamp: str) -> int:
         return 0
 
 
-def serp_transcript_to_srt(transcript: Optional[List[Dict]]) -> str:
-    """Convert a SerpApi-style transcript to SRT format.
+def raw_transcript_to_srt(transcript: Optional[List[Dict]]) -> str:
+    """Convert a raw transcript (from SerpAPI or Supadata) to SRT format.
 
     Args:
         transcript: List of dicts with ``start_ms``, ``end_ms``, ``snippet`` keys.
@@ -346,11 +421,11 @@ def serp_transcript_to_srt(transcript: Optional[List[Dict]]) -> str:
         An SRT-formatted string, or ``""`` if input is empty/invalid.
 
     Examples:
-        >>> serp_transcript_to_srt(None)
+        >>> raw_transcript_to_srt(None)
         ''
-        >>> serp_transcript_to_srt([])
+        >>> raw_transcript_to_srt([])
         ''
-        >>> serp_transcript_to_srt([{"start_ms": 0, "end_ms": 1000, "snippet": "Hi"}])
+        >>> raw_transcript_to_srt([{"start_ms": 0, "end_ms": 1000, "snippet": "Hi"}])
         '1\\n00:00:00,000 --> 00:00:01,000\\nHi\\n'
     """
     if not transcript or not isinstance(transcript, list):
