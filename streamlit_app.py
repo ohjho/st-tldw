@@ -29,8 +29,13 @@ DEFAULT_OLLAMA_API_KEY = os.environ.get("OLLAMA_API_KEY", None)
 YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY", None)
 SUPADATA_API_KEY = os.environ.get("SUPADATA_API_KEY", None)
 
+# Streamlit Cloud sets this env var automatically; use it to enable disk-backed
+# cache persistence only in the deployed environment (not during local dev).
+IS_STREAMLIT_CLOUD = os.environ.get("STREAMLIT_SHARING_MODE") is not None
+print(f"IS_STREAMLIT_CLOUD: {IS_STREAMLIT_CLOUD}")
 
-@st.cache_data(show_spinner=False)
+
+@st.cache_data(show_spinner=False, persist=IS_STREAMLIT_CLOUD)
 def _cached_analysis(
     video_id: str,
     analysis_type: str,
@@ -41,6 +46,7 @@ def _cached_analysis(
     max_tokens: int,
     api_key: str,
     api_base: str = None,
+    cache_version: int = 0,
 ) -> dict:
     """Run an LLM analysis call and cache the result.
 
@@ -59,6 +65,10 @@ def _cached_analysis(
         max_tokens: Max tokens for the response.
         api_key: Provider API key.
         api_base: Optional provider base URL.
+        cache_version: Per-video invalidation counter. Bumping this for a
+            given ``video_id`` forces a cache miss without clearing results
+            cached for other videos.  Callers manage the counter in
+            ``st.session_state.analysis_version``.
 
     Returns:
         dict with ``model`` and ``content`` keys.
@@ -122,12 +132,15 @@ def analyze_transcript(
 
     col_label, col_btn = st.columns([90, 10])
     col_label.caption("AI Summary:")
+    # Per-video cache invalidation: bump a version counter so only this
+    # video's cached analysis is regenerated (other videos keep their cache).
+    versions = st.session_state.setdefault("analysis_version", {})
     if col_btn.button(
         ":material/replay:",
         help="Clear cache and re-generate summary",
         type="tertiary",
     ):
-        _cached_analysis.clear()
+        versions[video_id] = versions.get(video_id, 0) + 1
         st.rerun()
 
     context_block = (
@@ -164,6 +177,7 @@ def analyze_transcript(
                 max_tokens=max_tokens,
                 api_key=api_key,
                 api_base=api_base,
+                cache_version=versions.get(video_id, 0),
             )
         st.caption(f"response from {result['model']}")
         if video_id:
