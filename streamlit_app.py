@@ -10,8 +10,8 @@ from utils import (
     copy_to_clipboard_button,
     detect_mobile_device,
     extract_video_id,
-    get_serpapi_searches_left,
-    get_supadata_credits_left,
+    get_serpapi_account_info,
+    get_supadata_account_info,
     get_video_metadata_youtube_api,
     get_youtube_transcript_serpapi,
     get_youtube_transcript_supadata,
@@ -563,25 +563,27 @@ def main():
             transcript_source = st.session_state.get("transcript_source", "")
             if transcript_source:
                 st.caption(f"Transcript Source: {transcript_source}")
+            cols = st.columns(2)
             if SERPAPI_KEY:
-                searches_left = get_serpapi_searches_left(SERPAPI_KEY)
-                if searches_left is not None:
-                    st.metric("SerpAPI Searches Left", searches_left)
-                else:
-                    st.warning("Could not fetch SerpAPI account info")
-            if SUPADATA_API_KEY:
-                supadata_info = get_supadata_credits_left(SUPADATA_API_KEY)
-                if supadata_info is not None:
-                    credits = (
-                        supadata_info["maxCredits"] - supadata_info["usedCredits"]
-                        if "maxCredits" in supadata_info.keys()
-                        and "usedCredits" in supadata_info.keys()
-                        else None
+                serp_info = get_serpapi_account_info(SERPAPI_KEY)
+                if serp_info:
+                    cols[0].progress(
+                        text=f"SerpAPI Usage ({serp_info['this_month_usage']}/{serp_info['searches_per_month']})",
+                        value=serp_info["this_month_usage"]
+                        / serp_info["searches_per_month"],
                     )
-                    if credits is not None:
-                        st.metric("Supadata Credits Left", credits)
-                    else:
-                        st.caption(f"Supadata: problem fetching account info")
+                else:
+                    cols[0].warning("Could not fetch SerpAPI account info")
+            if SUPADATA_API_KEY:
+                supadata_info = get_supadata_account_info(SUPADATA_API_KEY)
+                if supadata_info is not None:
+                    cols[1].progress(
+                        text=f"Supadata Usage ({supadata_info['usedCredits']}/{supadata_info['maxCredits']})",
+                        value=supadata_info["usedCredits"]
+                        / supadata_info["maxCredits"],
+                    )
+                else:
+                    cols[1].warning(f"Could not fetch Supadata account info")
 
     # Navigation tabs
     # tab1, tab2 = st.tabs(["📺 YouTube Transcript", "💬 Chat"])

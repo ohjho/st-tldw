@@ -33,11 +33,11 @@ uv run pytest
 - **`extract_video_id()`** - Extract video ID from various YouTube URL formats (standard, short, embed, bare ID).
 - **`get_youtube_transcript_serpapi()`** - Cached (`@st.cache_data(ttl="1d")`) SerpAPI call to fetch YouTube transcripts. Primary transcript source.
 - **`get_youtube_transcript_supadata()`** - Cached (`@st.cache_data(ttl="1d")`) Supadata API call to fetch YouTube transcripts. Fallback source when SerpAPI fails. Normalizes Supadata's `{text, offset, duration}` format to `{snippet, start_ms, end_ms}` for compatibility with `raw_transcript_to_srt()`.
-- **`get_supadata_credits_left()`** - Cached (5min TTL) call to Supadata `/v1/me` endpoint; displays remaining credits in the sidebar.
+- **`get_supadata_account_info()`** - Cached (5min TTL) call to Supadata `/v1/me` endpoint; displays remaining credits in the sidebar.
 - **`get_youtube_transcript()`** - Alternative transcript fetcher using `youtube-transcript-api` directly (currently unused, kept as fallback).
 - **`get_video_metadata_oembed()`** - Cached (`@st.cache_data(ttl="1d")`) call to the free YouTube oEmbed endpoint. Returns video title, author name/URL, and thumbnail URL. No API key required.
 - **`get_video_metadata_youtube_api()`** - Cached (`@st.cache_data(ttl="1d")`) call to the YouTube Data API v3. Returns rich metadata: title, description, channel, publish date, tags, view/like counts, duration, and thumbnail. Requires `YOUTUBE_API_KEY`.
-- **`get_serpapi_searches_left()`** - Cached (5min TTL) call to SerpAPI account endpoint; displays remaining searches in the sidebar.
+- **`get_serpapi_account_info()`** - Cached (5min TTL) call to SerpAPI account endpoint; displays remaining searches in the sidebar.
 - **`raw_transcript_to_srt()`** / **`ms_to_srt_timestamp()`** - Convert raw transcript (from SerpAPI or Supadata) to SRT subtitle format with download support.
 - **`copy_to_clipboard_button()`** - Render an HTML button via `st.html` that copies arbitrary text to the clipboard using `navigator.clipboard`.
 - **`render_markdown_with_timestamps()`** - Render LLM markdown with clickable timestamp links. Regex-finds `H:MM:SS`/`HH:MM:SS` patterns and converts them to `<a>` links via `st.markdown(unsafe_allow_html=True)`. Supports `open_in_new_tab` (adds `target="_blank"`) and `use_youtube_url` (links to youtube.com instead of in-app relative URL). Reuses `srt_timestamp_to_seconds()` for conversion.

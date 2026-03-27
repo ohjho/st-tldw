@@ -48,7 +48,7 @@ def extract_video_id(url: str) -> Optional[str]:
 
 
 @st.cache_data(ttl=300)
-def get_serpapi_searches_left(api_key: str) -> Optional[int]:
+def get_serpapi_account_info(api_key: str) -> Optional[int]:
     """Fetch total searches left from SerpAPI account endpoint.
 
     Args:
@@ -64,7 +64,7 @@ def get_serpapi_searches_left(api_key: str) -> Optional[int]:
             timeout=10,
         )
         resp.raise_for_status()
-        return resp.json().get("total_searches_left")
+        return resp.json()
     except Exception:
         return None
 
@@ -196,7 +196,7 @@ def get_youtube_transcript_supadata(video_id: str, supadata_key: str) -> dict:
 
 
 @st.cache_data(ttl=300)
-def get_supadata_credits_left(api_key: str) -> Optional[dict]:
+def get_supadata_account_info(api_key: str) -> Optional[dict]:
     """Fetch account/credit info from Supadata.
 
     Args:
