@@ -16,6 +16,7 @@ dependencies = [
     "langchain-huggingface>=0.1",
     "streamlit-float>=0.3",
     "streamlit-js-eval>=0.1.7",
+    "millify>=0.1.1",
 ]
 
 [tool.pytest.ini_options]

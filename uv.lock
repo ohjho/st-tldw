@@ -1346,6 +1346,12 @@ wheels = [
 ]
 
 [[package]]
+name = "millify"
+version = "0.1.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/c9/60/f81b9440107ac22cd8fa36924e194bb258b01aaa5484b8693eba2b542300/millify-0.1.1.tar.gz", hash = "sha256:619defdc98b6d23f941b5ce4aaf4bf87a0e0f64cd0446ffa299be94486597f1a", size = 1219, upload-time = "2018-01-15T02:19:08.138Z" }
+
+[[package]]
 name = "mpmath"
 version = "1.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3331,6 +3337,7 @@ dependencies = [
     { name = "langchain-community" },
     { name = "langchain-huggingface" },
     { name = "litellm" },
+    { name = "millify" },
     { name = "rank-bm25" },
     { name = "sentence-transformers" },
     { name = "streamlit" },
@@ -3351,6 +3358,7 @@ requires-dist = [
     { name = "langchain-community", specifier = ">=0.3" },
     { name = "langchain-huggingface", specifier = ">=0.1" },
     { name = "litellm", specifier = ">=1.81.10" },
+    { name = "millify", specifier = ">=0.1.1" },
     { name = "rank-bm25", specifier = ">=0.2" },
     { name = "sentence-transformers", specifier = ">=3.0" },
     { name = "streamlit", specifier = ">=1.54.0" },

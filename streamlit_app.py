@@ -3,6 +3,7 @@ import os
 import litellm
 import streamlit as st
 from dotenv import load_dotenv
+from millify import prettify
 from streamlit_float import float_init
 
 from chat_interface import chat_with_rag
@@ -300,7 +301,7 @@ def youtube_transcript(
             #     "Transcript Length",
             #     f"{len(st.session_state.youtube_transcript)} characters",
             # )
-            st.metric("Word Count", len(st.session_state.youtube_transcript.split()))
+            word_count = len(st.session_state.youtube_transcript.split())
 
             # Copy to clipboard and share link
             if st.session_state.youtube_video_id:
@@ -318,18 +319,18 @@ def youtube_transcript(
                     ":material/closed_caption:",
                 ]
             )
-            tab_text.caption("Transcript")
-            tab_text.text_area(
-                "Full Transcript",
-                value=st.session_state.youtube_transcript,
-                height=300,
-                disabled=True,
-                label_visibility="collapsed",
-            )
+            transcript_source = st.session_state.get("transcript_source", "")
+            with tab_text:
+                st.text_area(
+                    f"Transcript by `{transcript_source}` in plain text format ({prettify(word_count)} words):",
+                    value=st.session_state.youtube_transcript,
+                    height=300,
+                    disabled=True,
+                )
 
             # Show JSON/raw transcript returned by SerpApi
             with tab_json:
-                st.caption("Raw Transcript")
+                st.caption(f"Raw `{transcript_source}` Transcript Data")
                 st.write(st.session_state.raw_transcript)
 
             # Convert to SRT string and provide download button in the SRT tab
@@ -345,11 +346,11 @@ def youtube_transcript(
             if srt_string:
                 # Display SRT in a disabled text area for preview
                 tab_srt.text_area(
-                    "SRT Preview",
+                    "Transcript in SRT format",
                     value=srt_string,
                     height=300,
                     disabled=True,
-                    label_visibility="collapsed",
+                    help="the transcript in this format is consumed by the LLM",
                 )
                 # Provide download button
                 file_name = (
@@ -574,9 +575,6 @@ def main():
             )
 
         with tab_metrics:
-            transcript_source = st.session_state.get("transcript_source", "")
-            if transcript_source:
-                st.caption(f"Transcript Source: {transcript_source}")
             cols = st.columns(2)
             if SERPAPI_KEY:
                 serp_info = get_serpapi_account_info(SERPAPI_KEY)
