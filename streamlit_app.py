@@ -32,7 +32,7 @@ SUPADATA_API_KEY = os.environ.get("SUPADATA_API_KEY", None)
 
 # Streamlit Cloud sets this env var automatically; use it to enable disk-backed
 # cache persistence only in the deployed environment (not during local dev).
-IS_STREAMLIT_CLOUD = os.environ.get("STREAMLIT_SHARING_MODE") is not None
+IS_STREAMLIT_CLOUD = os.environ.get("USER") == "appuser"
 print(f"IS_STREAMLIT_CLOUD: {IS_STREAMLIT_CLOUD}")
 
 
