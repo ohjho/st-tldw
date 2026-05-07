@@ -11,6 +11,7 @@ from utils import (
     copy_to_clipboard_button,
     detect_mobile_device,
     extract_video_id,
+    get_ollama_free_models,
     get_serpapi_account_info,
     get_supadata_account_info,
     get_video_metadata_youtube_api,
@@ -492,8 +493,12 @@ def main():
             st.session_state.compact_mode_user_set = True
         st.session_state.compact_mode_value = b_compact
 
-        tab_readme, tab_settings, tab_metrics = st.tabs(
-            [":material/article:", ":material/settings:", ":material/info:"]
+        tab_settings, tab_metrics, tab_readme = st.tabs(
+            [
+                ":material/settings:",
+                ":material/info:",
+                ":material/article:",
+            ]
         )
         with tab_readme:
             st.write(f"""
@@ -534,17 +539,20 @@ def main():
                     help="Select an OpenRouter model for analysis",
                 )
             else:
+                ollama_options = (
+                    get_ollama_free_models(DEFAULT_OLLAMA_API_KEY)
+                    if DEFAULT_OLLAMA_API_KEY
+                    else ["gpt-oss:20b", "gpt-oss:120b", "glm-4.7"]
+                )
                 ollama_model = st.selectbox(
                     "Select Model",
-                    options=[
-                        "gemini-3-flash-preview",
-                        "qwen3.5",
-                        "deepseek-v3.2",
-                    ],
+                    options=ollama_options,
                     accept_new_options=True,
                     help="Select an [Ollama Cloud model](https://ollama.com/search?c=cloud) or type a custom name",
                 )
-                model = f"ollama/{ollama_model}"
+                # ollama_chat/ routes to /api/chat (the Ollama Cloud chat
+                # endpoint); the bare ollama/ prefix targets /api/generate
+                model = f"ollama_chat/{ollama_model}"
                 api_base = "https://ollama.com"
 
             # API Key input

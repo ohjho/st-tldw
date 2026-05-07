@@ -34,6 +34,7 @@ uv run pytest
 - **`get_youtube_transcript_serpapi()`** - Cached (`@st.cache_data(ttl="1d")`) SerpAPI call to fetch YouTube transcripts. Primary transcript source.
 - **`get_youtube_transcript_supadata()`** - Cached (`@st.cache_data(ttl="1d")`) Supadata API call to fetch YouTube transcripts. Fallback source when SerpAPI fails. Normalizes Supadata's `{text, offset, duration}` format to `{snippet, start_ms, end_ms}` for compatibility with `raw_transcript_to_srt()`.
 - **`get_supadata_account_info()`** - Cached (5min TTL) call to Supadata `/v1/me` endpoint; displays remaining credits in the sidebar.
+- **`get_ollama_free_models()`** - Cached (`@st.cache_data(ttl="1d")`) probe of Ollama Cloud. Lists models via `/api/tags`, then sequentially fires a 1-token call to `/api/chat` for each (sequential because the free tier permits only 1 concurrent request), returning only those that succeed (i.e. accessible on the user's free tier). Falls back to a hardcoded list (`gpt-oss:120b`, `glm-4.7`, `gpt-oss:20b`) on network failure or empty result. Results are sorted by `_OLLAMA_PREFERENCE_ORDER` (curated for transcript-summarization fit), with unranked / newly added models alphabetical at the end. Used to populate the Ollama model selectbox in the sidebar.
 - **`get_youtube_transcript()`** - Alternative transcript fetcher using `youtube-transcript-api` directly (currently unused, kept as fallback).
 - **`get_video_metadata_oembed()`** - Cached (`@st.cache_data(ttl="1d")`) call to the free YouTube oEmbed endpoint. Returns video title, author name/URL, and thumbnail URL. No API key required.
 - **`get_video_metadata_youtube_api()`** - Cached (`@st.cache_data(ttl="1d")`) call to the YouTube Data API v3. Returns rich metadata: title, description, channel, publish date, tags, view/like counts, duration, and thumbnail. Requires `YOUTUBE_API_KEY`.
@@ -58,6 +59,7 @@ uv run pytest
 - **Environment**: API keys loaded from `secrets.env` (gitignored). Required: `SERPAPI_KEY`, `OPENROUTER_API_KEY`. Optional: `YOUTUBE_API_KEY` (for YouTube Data API v3 metadata), `SUPADATA_API_KEY` (for Supadata transcript fallback).
 - **Transcript fallback chain**: SerpAPI (primary) -> Supadata (fallback). If SerpAPI fails or key is missing, Supadata is tried automatically.
 - **LLM routing**: Uses litellm with OpenRouter free-tier models by default (e.g., `openrouter/google/gemma-3-4b-it:free`). RAG chat uses langchain's `ChatLiteLLM` wrapper.
+- **Ollama Cloud model ranking**: `_OLLAMA_PREFERENCE_ORDER` in `utils.py` is a curated tier list (Tier 1 → Tier 3) for transcript-summarization quality. Ollama Cloud's catalog and free/paid split change frequently — when new models appear or the free-tier mix shifts, re-run `get_ollama_free_models()` against a live key and re-rank the constant. Models not in the list remain selectable but sort to the end of the dropdown. The litellm prefix `ollama_chat/` is required (routes to `/api/chat`); the bare `ollama/` prefix targets `/api/generate` and 403s on Ollama Cloud.
 - **RAG dependencies**: langchain, langchain-community, faiss-cpu, rank-bm25, sentence-transformers, langchain-huggingface.
 - **Device detection**: `streamlit-js-eval` queries `window.innerWidth` to auto-enable compact mode on mobile (≤600px). Detection runs once on first load; user can override via the sidebar toggle.
 - **URL query params**: `?v=VIDEO_ID` auto-loads a transcript on page load; `?method=semantic` pre-selects the RAG retrieval method; `?t=SECONDS` seeks the video to a specific timestamp (used by clickable timestamp links).
@@ -70,6 +72,7 @@ Tests live in the `tests/` directory. Pytest is configured in `pyproject.toml` w
 - `tests/test_utils.py` — unit tests for pure utility functions (no network)
 - `tests/test_oembed.py` — integration tests for oEmbed metadata fetcher (hits network)
 - `tests/test_youtube_api.py` — integration tests for YouTube Data API (requires `YOUTUBE_API_KEY`)
+- `tests/test_ollama.py` — integration tests for the Ollama Cloud LLM connection via litellm; verifies the default test model (`ollama_chat/gpt-oss:20b`) is callable and that `get_ollama_free_models()` returns a non-empty, correctly-bucketed list. Requires `OLLAMA_API_KEY`.
 
 ## Guidelines
 
