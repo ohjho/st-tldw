@@ -540,7 +540,7 @@ def main():
                 )
             else:
                 ollama_options = (
-                    get_ollama_free_models(DEFAULT_OLLAMA_API_KEY)
+                    get_ollama_free_models()
                     if DEFAULT_OLLAMA_API_KEY
                     else ["gpt-oss:20b", "gpt-oss:120b", "glm-4.7"]
                 )
@@ -548,7 +548,10 @@ def main():
                     "Select Model",
                     options=ollama_options,
                     accept_new_options=True,
-                    help="Select an [Ollama Cloud model](https://ollama.com/search?c=cloud) or type a custom name",
+                    help=(
+                        "Select an [Ollama Cloud model](https://ollama.com/search?c=cloud) or type a custom name."
+                        " A list of models available on free-tier is refereced [here](https://letsgada.github.io/ollama-cloud-free-models-list/models.json)."
+                    ),
                 )
                 # ollama_chat/ routes to /api/chat (the Ollama Cloud chat
                 # endpoint); the bare ollama/ prefix targets /api/generate

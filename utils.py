@@ -201,18 +201,18 @@ def get_youtube_transcript_supadata(video_id: str, supadata_key: str) -> dict:
 # later that's not listed here sort to the end alphabetically — they
 # remain selectable in the dropdown but are de-prioritized.
 _OLLAMA_PREFERENCE_ORDER: tuple = (
-    # Tier 1 — primary picks
-    "gpt-oss:120b",
-    "glm-4.7",
-    "qwen3-next:80b",
-    "gpt-oss:20b",
-    "cogito-2.1:671b",
     # Tier 2 — solid alternatives
     "glm-4.6",
     "minimax-m2.5",
     "nemotron-3-super",
     "gemma4:31b",
     "gemma3:27b",
+    # Tier 1 — primary picks
+    "gpt-oss:120b",
+    "glm-4.7",
+    "qwen3-next:80b",
+    "gpt-oss:20b",
+    "cogito-2.1:671b",
     # Tier 3 — smaller / older general models
     "minimax-m2.1",
     "nemotron-3-nano:30b",
@@ -231,64 +231,36 @@ def _ollama_sort_key(name: str) -> tuple:
         return (len(_OLLAMA_PREFERENCE_ORDER), name)
 
 
-@st.cache_data(ttl="1w", show_spinner="Discovering free Ollama Cloud models...")
-def get_ollama_free_models(
-    api_key: str,
-    api_base: str = "https://ollama.com",
-) -> List[str]:
-    """Return Ollama Cloud model names callable on the user's free tier.
+@st.cache_data(ttl="1d", show_spinner="Loading free Ollama Cloud models...")
+def get_ollama_free_models() -> List[str]:
+    """Return Ollama Cloud model names callable on the free tier.
 
-    Probes every model returned by ``/api/tags`` with a 1-token call to
-    ``/api/chat`` and keeps the ones that succeed. Models that respond
-    with "subscription required"/"upgrade" are filtered out. Cached for
-    1 day so the daily cost is one round-trip per model.
+    Reads the published list at
+    ``https://letsgada.github.io/ollama-cloud-free-models-list/models.json``
+    (refreshed daily by an external job). One cheap unauthenticated GET
+    replaces the older per-model probe of ``/api/chat``.
 
     Results are sorted by ``_OLLAMA_PREFERENCE_ORDER`` so the strongest
     fits for transcript summarization appear first; unranked / newly
     added models sort to the end alphabetically.
 
-    Args:
-        api_key: Ollama Cloud API key.
-        api_base: Ollama Cloud base URL (default ``https://ollama.com``).
-
     Returns:
         Sorted list of free-tier model names. Returns a small
         hardcoded fallback (``["gpt-oss:120b", "glm-4.7", "gpt-oss:20b"]``)
-        if the tags endpoint fails or no probe succeeds, so the caller
+        if the fetch fails or returns an empty list, so the caller
         never gets an empty list.
     """
-    headers = {"Authorization": f"Bearer {api_key}"}
-    fallback = ["gpt-oss:120b", "glm-4.7", "gpt-oss:20b"]
+    fallback = ["gemma4:31b", "glm-4.6", "gpt-oss:120b"]
+    url = "https://letsgada.github.io/ollama-cloud-free-models-list/models.json"
 
     try:
-        resp = requests.get(f"{api_base}/api/tags", headers=headers, timeout=10)
+        resp = requests.get(url, timeout=10)
         resp.raise_for_status()
-        models = [m["name"] for m in resp.json().get("models", [])]
+        models = resp.json().get("models", [])
     except Exception:
         return fallback
 
-    # Probe sequentially: Ollama Cloud's free tier permits only 1
-    # concurrent request, so parallel probes get rejected and would
-    # cause free models to be misclassified as paid.
-    free: List[str] = []
-    for name in models:
-        try:
-            r = requests.post(
-                f"{api_base}/api/chat",
-                headers=headers,
-                json={
-                    "model": name,
-                    "messages": [{"role": "user", "content": "hi"}],
-                    "stream": False,
-                    "options": {"num_predict": 1},
-                },
-                timeout=30,
-            )
-            if r.status_code == 200:
-                free.append(name)
-        except Exception:
-            continue
-    return sorted(free, key=_ollama_sort_key) or fallback
+    return sorted(models, key=_ollama_sort_key) or fallback
 
 
 @st.cache_data(ttl=300)

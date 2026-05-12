@@ -48,21 +48,20 @@ class TestOllamaCloudConnection:
         assert content.strip()
 
 
-@pytest.mark.skipif(not OLLAMA_API_KEY, reason="OLLAMA_API_KEY not set")
 class TestGetOllamaFreeModels:
     """Tests for the free-tier model discovery helper."""
 
     def test_returns_nonempty_list(self):
-        """Probe returns at least one callable free-tier model."""
+        """Fetch returns at least one free-tier model name."""
         # Bypass @st.cache_data for deterministic test runs.
-        free = get_ollama_free_models.__wrapped__(OLLAMA_API_KEY)
+        free = get_ollama_free_models.__wrapped__()
         assert isinstance(free, list)
         assert len(free) > 0
         assert all(isinstance(name, str) and name for name in free)
 
     def test_default_model_is_in_free_list(self):
         """The model used by the test suite is itself reported as free."""
-        free = get_ollama_free_models.__wrapped__(OLLAMA_API_KEY)
+        free = get_ollama_free_models.__wrapped__()
         bare_name = DEFAULT_OLLAMA_MODEL.split("/", 1)[1]
         assert bare_name in free
 
@@ -81,9 +80,3 @@ class TestOllamaCloudNoKey:
                 temperature=0.0,
                 max_tokens=5,
             )
-
-    def test_free_models_fallback_on_bad_key(self):
-        """Bad key short-circuits to the hardcoded fallback list."""
-        free = get_ollama_free_models.__wrapped__("INVALID_KEY")
-        assert isinstance(free, list)
-        assert len(free) > 0
